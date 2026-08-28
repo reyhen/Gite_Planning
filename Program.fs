@@ -6,11 +6,23 @@ open Microsoft.Extensions.Hosting
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.AspNetCore.DataProtection
 open Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation
+open Microsoft.AspNetCore.Server.Kestrel.Core
 
 module Program =
     [<EntryPoint>]
     let main args =
         let builder = WebApplication.CreateBuilder(args)
+
+        // Render impose un port dynamique
+        let port =
+            match System.Environment.GetEnvironmentVariable("PORT") with
+            | null -> 8080
+            | p -> int p
+
+        // IMPORTANT : désactiver HTTPS et écouter uniquement en HTTP
+        builder.WebHost.ConfigureKestrel(fun options ->
+            options.ListenAnyIP(port) // HTTP seulement
+        )
 
         // Services MVC + Razor
         builder.Services
@@ -18,8 +30,7 @@ module Program =
             .AddRazorRuntimeCompilation()
         |> ignore
 
-        builder.Services.AddRazorPages()
-        |> ignore
+        builder.Services.AddRazorPages() |> ignore
 
         builder.Services
             .AddDataProtection()
@@ -39,20 +50,14 @@ module Program =
 
         if not (builder.Environment.IsDevelopment()) then
             app.UseExceptionHandler("/Home/Error")
-            app.UseHsts()
-            |> ignore
+            // ⚠️ NE PAS utiliser HSTS ni HTTPS sur Render
+            // app.UseHsts() |> ignore
 
-        app.UseHttpsRedirection()
-        |> ignore
+        // ⚠️ SUPPRIMÉ : app.UseHttpsRedirection()
 
-        app.UseStaticFiles()
-        |> ignore
-
-        app.UseRouting()
-        |> ignore
-
-        app.UseAuthorization()
-        |> ignore
+        app.UseStaticFiles() |> ignore
+        app.UseRouting() |> ignore
+        app.UseAuthorization() |> ignore
 
         app.MapControllerRoute(
             name = "default",
@@ -60,8 +65,7 @@ module Program =
         )
         |> ignore
 
-        app.MapRazorPages()
-        |> ignore
+        app.MapRazorPages() |> ignore
 
         app.Run()
 
