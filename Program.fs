@@ -1,7 +1,9 @@
 namespace Gite_Planning
 
+open System
 open System.IO
 open Microsoft.AspNetCore.Builder
+open Microsoft.AspNetCore.Hosting
 open Microsoft.Extensions.Hosting
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.AspNetCore.DataProtection
@@ -10,61 +12,66 @@ open Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation
 module Program =
     [<EntryPoint>]
     let main args =
-        let builder = WebApplication.CreateBuilder(args)
 
         // Render impose un port dynamique
         let port =
-            match System.Environment.GetEnvironmentVariable("PORT") with
-            | null -> 8080
-            | p -> int p
+            match Environment.GetEnvironmentVariable("PORT") with
+            | null -> "8080"
+            | p -> p
 
-        // IMPORTANT : configurer l’URL via UseSetting (la seule API disponible)
-        builder.WebHost.UseSetting("urls", $"http://0.0.0.0:{port}")
+        // Pipeline ASP.NET Core F# classique
+        Host.CreateDefaultBuilder(args)
+            .ConfigureWebHostDefaults(fun webHostBuilder ->
+                webHostBuilder
+                    .UseUrls($"http://0.0.0.0:{port}")
+                    .Configure(fun app ->
+                        let env = app.ApplicationServices.GetRequiredService<IHostEnvironment>()
 
-        // Services MVC + Razor
-        builder.Services
-            .AddControllersWithViews()
-            .AddRazorRuntimeCompilation()
-        |> ignore
+                        if not env.IsDevelopment() then
+                            app.UseExceptionHandler("/Home/Error") |> ignore
 
-        builder.Services.AddRazorPages() |> ignore
+                        // NE PAS utiliser HTTPS sur Render
+                        // app.UseHttpsRedirection() |> ignore
 
-        builder.Services
-            .AddDataProtection()
-            .PersistKeysToFileSystem(
-                DirectoryInfo(
-                    Path.Combine(
-                        builder.Environment.ContentRootPath,
-                        "App_Data",
-                        "DataProtectionKeys"
+                        app.UseStaticFiles() |> ignore
+                        app.UseRouting() |> ignore
+                        app.UseAuthorization() |> ignore
+
+                        app.UseEndpoints(fun endpoints ->
+                            endpoints.MapControllerRoute(
+                                name = "default",
+                                pattern = "{controller=Home}/{action=Index}/{id?}"
+                            )
+                            |> ignore
+
+                            endpoints.MapRazorPages() |> ignore
+                        )
                     )
-                )
+                    .ConfigureServices(fun services ->
+                        services
+                            .AddControllersWithViews()
+                            .AddRazorRuntimeCompilation()
+                        |> ignore
+
+                        services.AddRazorPages() |> ignore
+
+                        services
+                            .AddDataProtection()
+                            .PersistKeysToFileSystem(
+                                DirectoryInfo(
+                                    Path.Combine(
+                                        Directory.GetCurrentDirectory(),
+                                        "App_Data",
+                                        "DataProtectionKeys"
+                                    )
+                                )
+                            )
+                            .SetApplicationName("Gite_Planning")
+                        |> ignore
+                    )
+                |> ignore
             )
-            .SetApplicationName("Gite_Planning")
-        |> ignore
-
-        let app = builder.Build()
-
-        if not (builder.Environment.IsDevelopment()) then
-            app.UseExceptionHandler("/Home/Error")
-            // NE PAS utiliser HSTS sur Render
-            // app.UseHsts() |> ignore
-
-        // NE PAS utiliser HTTPS sur Render
-        // app.UseHttpsRedirection() |> ignore
-
-        app.UseStaticFiles() |> ignore
-        app.UseRouting() |> ignore
-        app.UseAuthorization() |> ignore
-
-        app.MapControllerRoute(
-            name = "default",
-            pattern = "{controller=Home}/{action=Index}/{id?}"
-        )
-        |> ignore
-
-        app.MapRazorPages() |> ignore
-
-        app.Run()
+            .Build()
+            .Run()
 
         0
