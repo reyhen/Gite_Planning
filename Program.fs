@@ -19,19 +19,18 @@ module Program =
             | null -> "8080"
             | p -> p
 
-        // Pipeline ASP.NET Core F# classique
         Host.CreateDefaultBuilder(args)
             .ConfigureWebHostDefaults(fun webHostBuilder ->
                 webHostBuilder
-                    .UseUrls($"http://0.0.0.0:{port}")
+                    .UseUrls(sprintf "http://0.0.0.0:%s" port)
+                    |> ignore
+
+                webHostBuilder
                     .Configure(fun app ->
                         let env = app.ApplicationServices.GetRequiredService<IHostEnvironment>()
 
                         if not env.IsDevelopment() then
                             app.UseExceptionHandler("/Home/Error") |> ignore
-
-                        // NE PAS utiliser HTTPS sur Render
-                        // app.UseHttpsRedirection() |> ignore
 
                         app.UseStaticFiles() |> ignore
                         app.UseRouting() |> ignore
@@ -47,6 +46,9 @@ module Program =
                             endpoints.MapRazorPages() |> ignore
                         )
                     )
+                    |> ignore
+
+                webHostBuilder
                     .ConfigureServices(fun services ->
                         services
                             .AddControllersWithViews()
@@ -69,7 +71,7 @@ module Program =
                             .SetApplicationName("Gite_Planning")
                         |> ignore
                     )
-                |> ignore
+                    |> ignore
             )
             .Build()
             .Run()
