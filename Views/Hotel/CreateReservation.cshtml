@@ -1,0 +1,458 @@
+@model Gite_Planning.Models.ReservationForm
+@{
+    ViewData["Title"] = ViewData["ReservationId"] != null ? "Modifier une réservation" : "Créer une réservation";
+    var rooms = ViewData["Rooms"] as List<Gite_Planning.Models.Room> ?? new List<Gite_Planning.Models.Room>();
+    var selectedDate = ViewData["SelectedDate"] as string ?? DateTime.Today.ToString("yyyy-MM-dd");
+}
+
+<div class="hotel-container">
+    <div class="form-wrapper">
+        <h1>@ViewData["Title"]</h1>
+
+        @if (ViewData["Error"] != null)
+        {
+            <div class="alert alert-error">@ViewData["Error"]</div>
+        }
+
+        <form method="post" class="reservation-form" id="reservationForm" onsubmit="return validateReservationContact()">
+            <fieldset>
+                <legend>Informations client</legend>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="FirstName">Prénom *</label>
+                        <input type="text" id="FirstName" name="FirstName" value="@Model?.FirstName" placeholder="Ex: Jean" required class="form-control">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="LastName">Nom *</label>
+                        <input type="text" id="LastName" name="LastName" value="@Model?.LastName" placeholder="Ex: Dupont" required class="form-control">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="PhoneNumber">Téléphone</label>
+                        <input type="tel" id="PhoneNumber" name="PhoneNumber" value="@Model?.PhoneNumber" placeholder="06 XX XX XX XX" class="form-control">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="Email">Email</label>
+                        <input type="email" id="Email" name="Email" value="@Model?.Email" placeholder="email@example.com" class="form-control">
+                    </div>
+                </div>
+
+                <div id="contactValidationMessage" class="alert alert-warning" style="display:none; margin-top:0.75rem;">
+                    Saisissez au moins un moyen de contact : téléphone ou e-mail.
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend>Détails de la réservation</legend>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="ArrivalDate">Date d'arrivée *</label>
+                        <input type="date" id="ArrivalDate" name="ArrivalDate" value="@(string.IsNullOrWhiteSpace(Model?.ArrivalDate) ? selectedDate : Model.ArrivalDate)" required class="form-control">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="NumberOfNights">Nombre de nuitées *</label>
+                        <input type="number" id="NumberOfNights" name="NumberOfNights" value="@(Model?.NumberOfNights > 0 ? Model.NumberOfNights : 1)" min="1" required class="form-control">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="ReservedBeds">Nombre de lits réservés *</label>
+                        <input type="number" id="ReservedBeds" name="ReservedBeds" value="@(Model?.ReservedBeds > 0 ? Model.ReservedBeds : 1)" min="1" required class="form-control">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="DepartureDate">Date de départ *</label>
+                        <input type="date" id="DepartureDate" name="DepartureDate" value="@(string.IsNullOrWhiteSpace(Model?.DepartureDate) ? selectedDate : Model.DepartureDate)" readonly class="form-control">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="RoomId">Chambre *</label>
+                        <select id="RoomId" name="RoomId" required class="form-control">
+                            <option value="0">-- Sélectionner une chambre --</option>
+                            @foreach (var room in rooms)
+                            {
+                                if (Model != null && Model.RoomId == room.Id)
+                                {
+                                    <option value="@room.Id"
+                                            selected="selected"
+                                            data-room-name="@room.Name"
+                                            data-capacity="@room.NumberOfBeds"
+                                            data-semi-pension="@room.SemiPensionPrice"
+                                            data-night-breakfast="@room.NightWithBreakfastPrice"
+                                            data-night-meal="@room.NightWithMealPrice"
+                                            data-simple-night="@room.SimpleNightPrice">
+                                        @room.Name - @room.NumberOfBeds lit(s)
+                                    </option>
+                                }
+                                else
+                                {
+                                    <option value="@room.Id"
+                                            data-room-name="@room.Name"
+                                            data-capacity="@room.NumberOfBeds"
+                                            data-semi-pension="@room.SemiPensionPrice"
+                                            data-night-breakfast="@room.NightWithBreakfastPrice"
+                                            data-night-meal="@room.NightWithMealPrice"
+                                            data-simple-night="@room.SimpleNightPrice">
+                                        @room.Name - @room.NumberOfBeds lit(s)
+                                    </option>
+                                }
+                            }
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="PriceType">Type de réservation *</label>
+                        <select id="PriceType" name="PriceType" required class="form-control">
+                            <option value="semi-pension" selected="@(Model != null && Model.PriceType == "semi-pension" ? "selected" : null)">Demi-pension</option>
+                            <option value="night-breakfast" selected="@(Model != null && Model.PriceType == "night-breakfast" ? "selected" : null)">Nuitée + petit-déjeuner</option>
+                            <option value="night-meal" selected="@(Model != null && Model.PriceType == "night-meal" ? "selected" : null)">Nuitée + repas</option>
+                            <option value="simple-night" selected="@(Model != null && Model.PriceType == "simple-night" ? "selected" : null)">Nuitée seule</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="booking-summary" id="bookingSummaryBox">
+                    <div class="booking-summary-title">Tarif estimé</div>
+                    <div id="roomPriceSummary">Sélectionnez une chambre et un type de réservation.</div>
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend>Chambres supplémentaires (optionnel)</legend>
+                <p style="font-size: 0.9rem; color: #666; margin-bottom: 1rem;">
+                    Vous pouvez ajouter une deuxième ou une troisième chambre si la réservation comprend plus de lits que la chambre principale.
+                </p>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="AdditionalRoomId">Deuxième chambre</label>
+                        <select id="AdditionalRoomId" name="AdditionalRoomId" class="form-control" onchange="validateAdditionalRoom()">
+                            <option value="0">-- Pas de deuxième chambre --</option>
+                            @foreach (var room in rooms)
+                            {
+                                if (Model != null && Model.AdditionalRoomId == room.Id)
+                                {
+                                    <option value="@room.Id" selected="selected">
+                                        @room.Name - @room.NumberOfBeds lit(s)
+                                    </option>
+                                }
+                                else if (Model?.RoomId != room.Id)
+                                {
+                                    <option value="@room.Id">
+                                        @room.Name - @room.NumberOfBeds lit(s)
+                                    </option>
+                                }
+                            }
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="AdditionalReservedBeds">Lits dans la deuxième chambre</label>
+                        <input type="number" id="AdditionalReservedBeds" name="AdditionalReservedBeds" value="@(Model?.AdditionalReservedBeds > 0 ? Model.AdditionalReservedBeds : 0)" min="0" class="form-control" onchange="validateAdditionalRoom()">
+                        <div id="additionalRoomWarning" class="alert alert-warning" style="display:none; margin-top:0.5rem;">
+                            Si vous sélectionnez une chambre supplémentaire, veuillez indiquer le nombre de lits.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-row" style="margin-top: 1rem;">
+                    <div class="form-group">
+                        <label for="AdditionalRoomId2">Troisième chambre</label>
+                        <select id="AdditionalRoomId2" name="AdditionalRoomId2" class="form-control" onchange="validateAdditionalRoom()">
+                            <option value="0">-- Pas de troisième chambre --</option>
+                            @foreach (var room in rooms)
+                            {
+                                if (Model != null && Model.AdditionalRoomId2 == room.Id)
+                                {
+                                    <option value="@room.Id" selected="selected">
+                                        @room.Name - @room.NumberOfBeds lit(s)
+                                    </option>
+                                }
+                                else if (Model?.RoomId != room.Id && Model?.AdditionalRoomId != room.Id)
+                                {
+                                    <option value="@room.Id">
+                                        @room.Name - @room.NumberOfBeds lit(s)
+                                    </option>
+                                }
+                            }
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="AdditionalReservedBeds2">Lits dans la troisième chambre</label>
+                        <input type="number" id="AdditionalReservedBeds2" name="AdditionalReservedBeds2" value="@(Model?.AdditionalReservedBeds2 > 0 ? Model.AdditionalReservedBeds2 : 0)" min="0" class="form-control" onchange="validateAdditionalRoom()">
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend>Commentaire</legend>
+                <div class="form-group">
+                    <label for="Comment">Commentaire / demande particulière</label>
+                    <textarea id="Comment" name="Comment" class="form-control" rows="4" placeholder="Par exemple : lit bébé, arrivée tardive, allergies...">@Model?.Comment</textarea>
+                </div>
+            </fieldset>
+
+            <div class="form-actions">
+                <a href="/Hotel/Reservations" class="btn btn-secondary">Annuler</a>
+                <button type="submit" class="btn btn-primary btn-lg">@(ViewData["ReservationId"] != null ? "Mettre à jour" : "Enregistrer la réservation")</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const arrivalInput = document.getElementById('ArrivalDate');
+        const departureInput = document.getElementById('DepartureDate');
+        const nightsInput = document.getElementById('NumberOfNights');
+        const reservedBedsInput = document.getElementById('ReservedBeds');
+        const roomSelect = document.getElementById('RoomId');
+        const priceTypeSelect = document.getElementById('PriceType');
+        const roomPriceSummary = document.getElementById('roomPriceSummary');
+
+        function setDepartureFromNights() {
+            if (!arrivalInput || !departureInput || !nightsInput || !arrivalInput.value) return;
+
+            const arrival = new Date(arrivalInput.value + 'T00:00:00');
+            const nights = Math.max(parseInt(nightsInput.value, 10) || 1, 1);
+            const depart = new Date(arrival);
+            depart.setDate(arrival.getDate() + nights);
+
+            const yyyy = depart.getFullYear();
+            const mm = String(depart.getMonth() + 1).padStart(2, '0');
+            const dd = String(depart.getDate()).padStart(2, '0');
+            departureInput.value = `${yyyy}-${mm}-${dd}`;
+        }
+
+        function getPriceTypeLabel(type) {
+            switch (type) {
+                case 'semi-pension': return 'Demi-pension';
+                case 'night-breakfast': return 'Nuitée + petit-déjeuner';
+                case 'night-meal': return 'Nuitée + repas';
+                case 'simple-night': return 'Nuitée seule';
+                default: return 'Tarif';
+            }
+        }
+
+        function formatCurrency(value) {
+            return new Intl.NumberFormat('fr-FR', {
+                style: 'currency',
+                currency: 'EUR',
+                maximumFractionDigits: 2
+            }).format(value);
+        }
+
+        function validateReservationContact() {
+            const phoneValue = document.getElementById('PhoneNumber')?.value?.trim() || '';
+            const emailValue = document.getElementById('Email')?.value?.trim() || '';
+            const message = document.getElementById('contactValidationMessage');
+
+            if (!phoneValue && !emailValue) {
+                if (message) {
+                    message.style.display = 'block';
+                }
+                return false;
+            }
+
+            if (message) {
+                message.style.display = 'none';
+            }
+
+            return true;
+        }
+
+        function updateRoomPriceSummary() {
+            if (!roomSelect || !priceTypeSelect || !roomPriceSummary) return;
+
+            const roomId = Number(roomSelect.value || 0);
+            const selectedRoom = roomSelect.options[roomSelect.selectedIndex];
+            const priceType = priceTypeSelect.value || 'simple-night';
+            const nights = Math.max(parseInt(nightsInput.value, 10) || 1, 1);
+            const reservedBeds = Math.max(parseInt(reservedBedsInput?.value || '1', 10) || 1, 1);
+
+            if (!selectedRoom || roomId === 0) {
+                roomPriceSummary.textContent = 'Sélectionnez une chambre pour voir le tarif.';
+                return;
+            }
+
+            const roomName = selectedRoom.dataset.roomName || 'Chambre';
+            const roomCapacity = Number(selectedRoom.dataset.capacity || 0);
+            const unitPrice = Number(selectedRoom.dataset[priceType.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase())] || 0);
+            const total = unitPrice * nights * reservedBeds;
+
+            roomPriceSummary.innerHTML = `<strong>${roomName}</strong> • ${getPriceTypeLabel(priceType)}<br>` +
+                `${formatCurrency(unitPrice)} / nuitée • ${reservedBeds} lit${reservedBeds > 1 ? 's' : ''} réservé${reservedBeds > 1 ? 's' : ''} • Total estimé : ${formatCurrency(total)} pour ${nights} nuitée${nights > 1 ? 's' : ''}`;
+        }
+
+        function validateAdditionalRoom() {
+            const additionalRoomId = document.getElementById('AdditionalRoomId')?.value || '0';
+            const additionalBeds = document.getElementById('AdditionalReservedBeds')?.value || '0';
+            const warning = document.getElementById('additionalRoomWarning');
+
+            if (additionalRoomId !== '0' && (!additionalBeds || parseInt(additionalBeds) <= 0)) {
+                if (warning) warning.style.display = 'block';
+            } else {
+                if (warning) warning.style.display = 'none';
+            }
+        }
+
+        if (!departureInput.value || departureInput.value === arrivalInput.value) {
+            setDepartureFromNights();
+        }
+
+        arrivalInput.addEventListener('change', function () {
+            setDepartureFromNights();
+        });
+
+        nightsInput.addEventListener('input', function () {
+            setDepartureFromNights();
+            updateRoomPriceSummary();
+        });
+
+        if (reservedBedsInput) {
+            reservedBedsInput.addEventListener('input', updateRoomPriceSummary);
+        }
+
+        roomSelect.addEventListener('change', updateRoomPriceSummary);
+        priceTypeSelect.addEventListener('change', updateRoomPriceSummary);
+
+        updateRoomPriceSummary();
+    });
+</script>
+
+<style>
+.booking-summary {
+    margin-top: 1rem;
+    padding: 1rem 1.25rem;
+    border: 1px solid #dfe7f4;
+    background: #eef4ff;
+    border-radius: 8px;
+    color: #1f2937;
+}
+
+.booking-summary-title {
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.hotel-container {
+    max-width: 760px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+.form-wrapper {
+    background: white;
+    border: 1px solid #dfe7f4;
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 4px 6px rgba(31, 41, 55, 0.1);
+}
+
+.form-wrapper h1 {
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    color: #1f2937;
+    border-bottom: 2px solid #4f46e5;
+    padding-bottom: 1rem;
+}
+
+.reservation-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+fieldset {
+    border: 1px solid #dfe7f4;
+    border-radius: 8px;
+    padding: 1.5rem;
+    background: #f8fafc;
+}
+
+legend {
+    padding: 0 0.5rem;
+    font-weight: 700;
+    color: #1f2937;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.form-group label {
+    font-weight: 600;
+    color: #1f2937;
+    font-size: 0.95rem;
+}
+
+.form-control {
+    padding: 0.75rem;
+    border: 1px solid #dfe7f4;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 1rem;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 3px #e0e7ff;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+}
+
+.btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 1rem;
+}
+
+.btn-primary {
+    background: #4f46e5;
+    color: white;
+}
+
+.btn-secondary {
+    background: #e5e7eb;
+    color: #1f2937;
+}
+
+.alert {
+    padding: 1rem;
+    border-radius: 6px;
+    margin-bottom: 1rem;
+}
+
+.alert-error {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+}
+</style>

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Calendrier de réservation</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<h1>Calendrier de réservation</h1>
+<div id="calendar"></div>
+
+<script src="calendar.js"></script>
+</body>
+</html>
+
+
+#calendar {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+    max-width: 800px;
+}
+
+.day {
+    padding: 12px;
+    border: 1px solid #ccc;
+    text-align: center;
+    cursor: pointer;
+}
+
+.free {
+    background: #e8ffe8;
+}
+
+.booked {
+    background: #ffd6d6;
+}
+
+
+async function loadReservations() {
+    const r = await fetch("api/load.php");
+    return await r.json();
+}
+
+function renderCalendar(reservations) {
+    const cal = document.getElementById("calendar");
+    cal.innerHTML = "";
+
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = today.getMonth();
+
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+
+    for (let d = 1; d <= lastDay.getDate(); d++) {
+        const dateStr = `${year}-${month+1}-${d}`;
+        const div = document.createElement("div");
+        div.classList.add("day");
+
+        if (reservations.includes(dateStr)) {
+            div.classList.add("booked");
+        } else {
+            div.classList.add("free");
+        }
+
+        div.innerHTML = d;
+
+        div.onclick = async () => {
+            await fetch("api/save.php?date=" + dateStr);
+            location.reload();
+        };
+
+        cal.appendChild(div);
+    }
+}
+
+loadReservations().then(renderCalendar);
+
+
+<?php
+header("Content-Type: application/json");
+echo file_get_contents("../data/reservations.json");
+
+
+<?php
+$date = $_GET["date"] ?? null;
+if (!$date) die("No date");
+
+$file = "../data/reservations.json";
+$res = json_decode(file_get_contents($file), true);
+
+if (!in_array($date, $res)) {
+    $res[] = $date;
+}
+
+file_put_contents($file, json_encode($res));
+echo "OK";

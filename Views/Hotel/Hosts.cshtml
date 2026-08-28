@@ -1,0 +1,312 @@
+@model List<Gite_Planning.Models.Host>
+@{
+    ViewData["Title"] = "Hébergeurs";
+}
+
+<div class="hosts-container">
+    <div class="section-header">
+        <div>
+            <h1>🏡 Hébergeurs</h1>
+            <p>Coordonnées des hébergements partenaires à Lauzerte.</p>
+        </div>
+        <form asp-controller="Hotel" asp-action="ClearHosts" method="post" onsubmit="return confirm('Réinitialiser tous les hébergeurs ? Cette action est irréversible.')">
+            <button type="submit" class="btn-reset">RAZ</button>
+        </form>
+    </div>
+
+    <details class="add-host-panel">
+        <summary>+ Ajouter un hébergement</summary>
+        <form asp-controller="Hotel" asp-action="CreateHost" method="post" class="host-form">
+            <div class="host-form-grid">
+                <div class="form-group form-group-wide">
+                    <label for="Name">Nom *</label>
+                    <input id="Name" name="Name" type="text" required />
+                </div>
+                <div class="form-group">
+                    <label for="PhoneNumber">Téléphone *</label>
+                    <input id="PhoneNumber" name="PhoneNumber" type="tel" required />
+                </div>
+                <div class="form-group">
+                    <label for="Email">E-mail *</label>
+                    <input id="Email" name="Email" type="email" required />
+                </div>
+                <div class="form-group form-group-wide">
+                    <label for="Address">Adresse *</label>
+                    <textarea id="Address" name="Address" rows="2" required></textarea>
+                </div>
+            </div>
+            <button type="submit" class="btn-add-host">Ajouter l’hébergement</button>
+        </form>
+    </details>
+
+    <div class="hosts-grid">
+        @foreach (var host in Model)
+        {
+            <article class="host-card">
+                <h2>@host.Name</h2>
+
+                <div class="host-info">
+                    <strong>📞 Téléphone</strong>
+                    <div class="contact-details">
+                        <span class="contact-value">@host.PhoneNumber</span>
+                        <div class="contact-actions" aria-label="Actions pour le numéro @host.PhoneNumber">
+                            <a href="sms:@host.PhoneNumber" class="contact-action contact-action-message" title="Envoyer un message à @host.PhoneNumber">💬 Message</a>
+                            <a href="tel:@host.PhoneNumber" class="contact-action contact-action-call" title="Appeler @host.PhoneNumber">📞 Appeler</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="host-info">
+                    <strong>📧 E-mail</strong>
+                    <div class="contact-details">
+                        <span class="contact-value">@host.Email</span>
+                        <div class="contact-actions" aria-label="Actions pour l’adresse e-mail @host.Email">
+                            <a href="mailto:@host.Email" class="contact-action contact-action-email" title="Envoyer un e-mail à @host.Email">✉️ Envoyer un e-mail</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="host-info">
+                    <strong>📍 Adresse</strong>
+                    <span>@host.Address</span>
+                </div>
+
+                <form asp-controller="Hotel" asp-action="DeleteHost" method="post" class="delete-host-form" onsubmit="return confirm('Supprimer cet hébergement ?')">
+                    <a asp-controller="Hotel" asp-action="EditHost" asp-route-id="@host.Id" class="btn-edit-host">Modifier</a>
+                    <input type="hidden" name="id" value="@host.Id" />
+                    <button type="submit" class="btn-delete-host">Supprimer</button>
+                </form>
+            </article>
+        }
+    </div>
+</div>
+
+<style>
+.hosts-container {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 0 1rem 2rem;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    border-bottom: 2px solid #4f46e5;
+    padding-bottom: 1rem;
+}
+
+.section-header h1 {
+    margin: 0 0 0.35rem;
+    color: #1f2937;
+}
+
+.section-header p {
+    margin: 0;
+    color: #64748b;
+}
+
+.hosts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.25rem;
+}
+
+.add-host-panel {
+    margin-bottom: 1.5rem;
+    padding: 1rem 1.25rem;
+    background: #f8fafc;
+    border: 1px solid #dfe7f4;
+    border-radius: 10px;
+}
+
+.add-host-panel summary {
+    cursor: pointer;
+    color: #4f46e5;
+    font-weight: 700;
+}
+
+.host-form {
+    margin-top: 1rem;
+}
+
+.host-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.form-group-wide {
+    grid-column: span 2;
+}
+
+.form-group label {
+    color: #374151;
+    font-weight: 600;
+}
+
+.form-group input,
+.form-group textarea {
+    width: 100%;
+    padding: 0.65rem 0.75rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+}
+
+.btn-add-host,
+.btn-edit-host,
+.btn-delete-host {
+    margin-top: 1rem;
+    padding: 0.55rem 0.9rem;
+    border: 0;
+    border-radius: 6px;
+    color: #ffffff;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btn-add-host { background: #4f46e5; }
+.btn-edit-host { background: #d97706; text-decoration: none; }
+.btn-delete-host { background: #dc2626; }
+.btn-reset { background: #dc2626; padding: 0.55rem 0.9rem; border: 0; border-radius: 6px; color: #ffffff; font-weight: 600; cursor: pointer; }
+
+.host-card {
+    padding: 1.5rem;
+    background: #ffffff;
+    border: 1px solid #dfe7f4;
+    border-top: 4px solid #4f46e5;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(31, 41, 55, 0.1);
+}
+
+.host-card h2 {
+    margin: 0 0 1.25rem;
+    color: #1f2937;
+    font-size: 1.15rem;
+}
+
+.host-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    margin-top: 1rem;
+    color: #1f2937;
+}
+
+.host-info:first-of-type {
+    margin-top: 0;
+}
+
+.host-info strong {
+    color: #4f46e5;
+    font-size: 0.9rem;
+}
+
+.delete-host-form {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+    border-top: 1px solid #e2e8f0;
+}
+
+.contact-details {
+    position: relative;
+    width: fit-content;
+    max-width: 100%;
+}
+
+.contact-value {
+    display: inline-block;
+    padding: 0.15rem 0.35rem;
+    margin: -0.15rem -0.35rem;
+    border-radius: 4px;
+}
+
+.contact-details:hover .contact-value,
+.contact-details:focus-within .contact-value {
+    background: #eef2ff;
+}
+
+.contact-actions {
+    position: absolute;
+    z-index: 10;
+    top: calc(100% + 0.4rem);
+    left: 0;
+    display: flex;
+    gap: 0.4rem;
+    width: max-content;
+    max-width: min(280px, calc(100vw - 3rem));
+    padding: 0.45rem;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    box-shadow: 0 8px 16px rgba(31, 41, 55, 0.15);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-4px);
+    transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s ease;
+}
+
+.contact-details:hover .contact-actions,
+.contact-details:focus-within .contact-actions {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.contact-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.4rem 0.6rem;
+    border-radius: 6px;
+    color: #ffffff;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.contact-action:hover,
+.contact-action:focus {
+    color: #ffffff;
+    filter: brightness(0.92);
+}
+
+.contact-action-message { background: #0ea5e9; }
+.contact-action-call { background: #16a34a; }
+.contact-action-email { background: #4f46e5; }
+
+@@media (hover: none) {
+    .contact-actions {
+        position: static;
+        width: auto;
+        max-width: none;
+        margin-top: 0.5rem;
+        padding: 0;
+        border: 0;
+        box-shadow: none;
+        opacity: 1;
+        visibility: visible;
+        transform: none;
+    }
+}
+
+@@media (max-width: 640px) {
+    .host-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .form-group-wide {
+        grid-column: span 1;
+    }
+}
+</style>

@@ -1,0 +1,673 @@
+@model (List<Gite_Planning.Models.Reservation>, List<Gite_Planning.Models.Room>)
+@{
+    ViewData["Title"] = "Gestion des réservations";
+    var reservations = Model.Item1;
+    var rooms = Model.Item2;
+    var selectedDay = Context.Request.Query["day"].ToString();
+    var selectedRoomId = Context.Request.Query["roomId"].ToString();
+    var selectedFromDate = Context.Request.Query["fromDate"].ToString();
+    var selectedToDate = Context.Request.Query["toDate"].ToString();
+    var selectedName = Context.Request.Query["name"].ToString();
+    
+    // Grouper les réservations par GroupId
+    var groupedReservations = reservations
+        .Where(r => r.Status != "cancelled")
+        .GroupBy(r => r.GroupId == 0 ? r.Id : r.GroupId)
+        .Select(g => new {
+            GroupId = g.Key,
+            Reservations = g.OrderBy(r => r.Id).ToList(),
+            FirstRes = g.OrderBy(r => r.Id).First()
+        })
+        .OrderByDescending(g => g.FirstRes.ArrivalDate)
+        .ToList();
+}
+
+<div class="hotel-container">
+    <div class="section-header">
+        <h1>📅 Gestion des réservations</h1>
+        <div class="section-actions">
+            <a href="/Hotel/CreateReservation" class="btn btn-primary btn-lg">+ Nouvelle réservation</a>
+            <a href="/Hotel/ExportReservationsCsv" class="btn btn-success btn-lg">Export CSV</a>
+            <form asp-controller="Hotel" asp-action="ImportReservationsCsv" method="post" enctype="multipart/form-data" class="import-form">
+                <input type="file" name="file" accept=".csv,text/csv" class="form-control-file" />
+                <button type="submit" class="btn btn-secondary btn-lg">Import CSV</button>
+            </form>
+            <form asp-controller="Hotel" asp-action="ClearReservations" method="post" onsubmit="return confirm('Réinitialiser toutes les réservations ? Cette action est irréversible.')">
+                <button type="submit" class="btn btn-danger btn-lg">RAZ</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="filter-panel">
+        <div class="filter-header">
+            <h2>Filtrer les réservations</h2>
+            <a href="/Hotel/Reservations" class="btn btn-light">Réinitialiser</a>
+        </div>
+
+        <form method="get" action="/Hotel/Reservations" class="filter-form">
+            <div class="filter-grid">
+                <div class="field-group">
+                    <label for="day">Par jour</label>
+                    <input id="day" name="day" type="date" value="@selectedDay" />
+                </div>
+
+                <div class="field-group">
+                    <label for="roomId">Par chambre</label>
+                    <select id="roomId" name="roomId">
+                        <option value="">Toutes les chambres</option>
+                        @foreach (var room in rooms)
+                        {
+                            if (selectedRoomId == room.Id.ToString())
+                            {
+                                <option value="@room.Id" selected="selected">@room.Name</option>
+                            }
+                            else
+                            {
+                                <option value="@room.Id">@room.Name</option>
+                            }
+                        }
+                    </select>
+                </div>
+
+                <div class="field-group">
+                    <label for="fromDate">Période du</label>
+                    <input id="fromDate" name="fromDate" type="date" value="@selectedFromDate" />
+                </div>
+
+                <div class="field-group">
+                    <label for="toDate">au</label>
+                    <input id="toDate" name="toDate" type="date" value="@selectedToDate" />
+                </div>
+
+                <div class="field-group field-group-wide">
+                    <label for="name">Par nom</label>
+                    <input id="name" name="name" type="text" value="@selectedName" placeholder="Nom ou prénom" />
+                </div>
+            </div>
+
+            <div class="filter-actions">
+                <button type="submit" class="btn btn-primary">Appliquer</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="filter-summary">
+        @if (groupedReservations.Count == 0)
+        {
+            <p>Aucune réservation ne correspond aux filtres sélectionnés.</p>
+        }
+        else
+        {
+            <p>@groupedReservations.Count réservation(s) affichée(s)</p>
+        }
+    </div>
+
+    @if (groupedReservations.Count == 0)
+    {
+        <div class="empty-state">
+            <p>Aucune réservation</p>
+        </div>
+    }
+    else
+    {
+        <table class="reservations-table">
+            <thead>
+                <tr>
+                    <th>Client</th>
+                    <th>Arrivée</th>
+                    <th>Départ</th>
+                    <th>Nuits</th>
+                    <th>Chambres</th>
+                    <th>Lits</th>
+                    <th>Contact</th>
+                    <th>Tarif</th>
+                    <th>Total</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var group in groupedReservations)
+                {
+                    var firstRes = group.FirstRes;
+                    var isCombined = group.Reservations.Count > 1;
+                    var totalBeds = group.Reservations.Sum(r => r.ReservedBeds);
+                    var totalPrice = group.Reservations.Sum(r => r.TotalPrice);
+                    var roomNames = string.Join(" + ", group.Reservations.Select(r => r.RoomName));
+                    
+                    <tr class="@(isCombined ? "row-combined" : "")">
+                        <td class="client-name">
+                            <strong>@firstRes.FirstName @firstRes.LastName</strong>
+                        </td>
+                        <td class="date-arrival">
+                            @firstRes.ArrivalDate.ToString("ddd dd/MM")
+                        </td>
+                        <td class="date-departure">
+                            @firstRes.DepartureDate.ToString("ddd dd/MM")
+                        </td>
+                        <td class="nights-count">
+                            @firstRes.NumberOfNights
+                        </td>
+                        <td class="rooms-list">
+                            @if (isCombined)
+                            {
+                                <span class="badge-multi">@group.Reservations.Count</span>
+                            }
+                            @roomNames
+                        </td>
+                        <td class="beds-count">
+                            @if (isCombined)
+                            {
+                                <span class="total-beds">@totalBeds</span>
+                                <div class="beds-detail">
+                                    @foreach (var res in group.Reservations)
+                                    {
+                                        <span>@res.RoomName: @res.ReservedBeds</span>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <span>@firstRes.ReservedBeds</span>
+                            }
+                        </td>
+                        <td class="contact-info">
+                            @if (!string.IsNullOrWhiteSpace(firstRes.PhoneNumber))
+                            {
+                                <div><a href="tel:@firstRes.PhoneNumber">@firstRes.PhoneNumber</a></div>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(firstRes.Email))
+                            {
+                                <div><a href="mailto:@firstRes.Email">@firstRes.Email</a></div>
+                            }
+                        </td>
+                        <td class="price-type">
+                            @(firstRes.PriceType switch {
+                                "semi-pension" => "Demi-pension",
+                                "night-breakfast" => "Nuit + PDJ",
+                                "night-meal" => "Nuit + Repas",
+                                "simple-night" => "Nuit seule",
+                                _ => firstRes.PriceType
+                            })
+                        </td>
+                        <td class="total-price">
+                            @totalPrice.ToString("F2")€
+                        </td>
+                        <td class="actions">
+                            <div class="reservation-actions">
+                                <a asp-controller="Hotel"
+                                    asp-action="EditReservation"
+                                    asp-route-id="@firstRes.Id"
+                                    class="btn btn-sm btn-edit"
+                                    title="Modifier"
+                                    aria-label="Modifier la réservation">
+                                ✏️
+                                </a>
+
+                            <form action="/Hotel/CancelReservation" method="post" class="form-inline delete-reservation-form">
+                                <input type="hidden" name="id" value="@firstRes.Id" />
+
+                                <button type="submit"
+                                        class="btn btn-sm btn-delete"
+                                        title="Annuler la réservation">
+        🗑️
+                                </button>
+                            </form>
+
+                            </div>
+                        </td>
+
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>
+
+<style>
+.reservations-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-top: 1.5rem;
+}
+
+.reservations-table thead {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    font-weight: 600;
+}
+
+.reservations-table th {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.reservations-table td {
+    padding: 0.875rem 1rem;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 0.95rem;
+}
+
+.reservations-table tbody tr:hover {
+    background: #f9fafb;
+}
+
+.reservations-table tbody tr.row-combined {
+    background: #fffbea;
+}
+
+.reservations-table tbody tr.row-combined:hover {
+    background: #fff8d6;
+}
+
+.client-name {
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.date-arrival, .date-departure {
+    text-align: center;
+    white-space: nowrap;
+}
+
+.nights-count, .beds-count {
+    text-align: center;
+    font-weight: 500;
+}
+
+.rooms-list {
+    color: #4b5563;
+}
+
+.badge-multi {
+    display: inline-block;
+    background: #fbbf24;
+    color: #78350f;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    margin-right: 0.5rem;
+}
+
+.beds-detail {
+    display: none;
+    font-size: 0.85rem;
+    color: #666;
+    margin-top: 0.25rem;
+}
+
+.total-beds {
+    font-weight: 600;
+}
+
+.contact-info {
+    font-size: 0.9rem;
+}
+
+.contact-info a {
+    color: #667eea;
+    text-decoration: none;
+}
+
+.contact-info a:hover {
+    text-decoration: underline;
+}
+
+.contact-info div {
+    white-space: nowrap;
+}
+
+.price-type {
+    text-align: center;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.total-price {
+    font-weight: 700;
+    color: #059669;
+    text-align: right;
+}
+
+.actions {
+    text-align: center;
+    white-space: nowrap;
+}
+
+.actions .btn-sm {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    min-width: 42px;
+    padding: 0;
+    margin: 0 3px;
+    border: none;
+    cursor: pointer;
+    border-radius: 8px;
+    font-size: 1.15rem;
+    line-height: 1;
+    vertical-align: middle;
+    box-sizing: border-box;
+}
+
+.reservation-actions .btn-sm {
+    width: 42px;
+    height: 42px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    flex: 0 0 42px;
+}
+
+.btn-edit {
+    background: #dbeafe;
+    color: #0369a1;
+}
+
+.btn-edit:hover {
+    background: #bfdbfe;
+}
+
+.btn-delete {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.btn-delete:hover {
+    background: #fecaca;
+}
+
+.reservation-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    white-space: nowrap;
+}
+
+.reservation-cancel-form {
+    display: flex;
+    margin: 0;
+    padding: 0;
+}
+
+.hotel-container {
+    width: min(100%, 1400px);
+    max-width: 100%;
+    margin: 2rem auto;
+    padding: 0 1rem 2rem;
+    box-sizing: border-box;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    border-bottom: 2px solid #4f46e5;
+    padding-bottom: 1rem;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.section-header h1 {
+    margin: 0;
+    color: #1f2937;
+}
+
+.section-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.import-form {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.form-control-file {
+    max-width: 220px;
+    padding: 0.45rem 0.75rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: white;
+}
+
+.filter-panel {
+    background: #f8fafc;
+    border: 1px solid #dfe7f4;
+    border-radius: 12px;
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+}
+
+.filter-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.filter-header h2 {
+    margin: 0;
+    font-size: 1.15rem;
+    color: #1f2937;
+}
+
+.filter-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.filter-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+}
+
+.field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+}
+
+.field-group-wide {
+    grid-column: span 2;
+}
+
+.field-group label {
+    font-weight: 600;
+    color: #374151;
+}
+
+.field-group input,
+.field-group select {
+    width: 100%;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 0.7rem 0.8rem;
+    font-size: 0.95rem;
+}
+
+.filter-actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.filter-summary {
+    margin-bottom: 1rem;
+    color: #374151;
+    font-weight: 600;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 2rem;
+    color: #666;
+}
+
+.btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-primary {
+    background: #4f46e5;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #4338ca;
+}
+
+.btn-success {
+    background: #10b981;
+    color: white;
+}
+
+.btn-success:hover {
+    background: #059669;
+}
+
+.btn-secondary {
+    background: #6b7280;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #4b5563;
+}
+
+.btn-danger {
+    background: #ef4444;
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #dc2626;
+}
+
+.btn-light {
+    background: #f3f4f6;
+    color: #374151;
+}
+
+.btn-light:hover {
+    background: #e5e7eb;
+}
+
+.btn-lg {
+    padding: 0.75rem 1.25rem;
+    font-size: 0.95rem;
+}
+
+.section-actions {
+    flex-wrap: wrap;
+}
+
+.reservations-table {
+    width: 100%;
+    min-width: 980px;
+    display: table;
+    table-layout: auto;
+    border-collapse: collapse;
+    overflow-x: auto;
+    white-space: nowrap;
+}
+
+.field-group-wide {
+    grid-column: span 1;
+}
+
+@@media (max-width: 1100px) {
+    .hotel-container {
+        padding: 0 0.75rem 1.5rem;
+    }
+
+    .reservations-table {
+        min-width: 860px;
+    }
+}
+
+@@media (max-width: 768px) {
+    .section-header {
+        align-items: flex-start;
+    }
+
+    .section-actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .reservations-table {
+        min-width: 760px;
+        font-size: 0.8rem;
+    }
+}
+@@media (max-width: 768px) {
+    .actions {
+        position: sticky;
+        right: 0;
+        background: white;
+        z-index: 2;
+        box-shadow: -4px 0 6px rgba(0, 0, 0, 0.06);
+    }
+
+    .row-combined .actions {
+        background: #fffbea;
+    }
+
+    .reservation-actions {
+        gap: 0.5rem;
+    }
+
+    .btn-sm {
+        width: 44px;
+        height: 44px;
+        flex-basis: 44px;
+        font-size: 1.05rem;
+    }
+
+    .reservation-cancel-form {
+        display: flex;
+    }
+}
+
+</style>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll(".delete-reservation-form").forEach(function (form) {
+        form.addEventListener("submit", function (event) {
+            const id = form.querySelector('input[name="id"]').value;
+
+            if (!confirm("Annuler la réservation " + id + " ?")) {
+                event.preventDefault();
+                return;
+            }
+
+            console.log("Annulation réservation ID =", id);
+        });
+    });
+});
+</script>

@@ -1,0 +1,83 @@
+@using Gite_Planning.Services
+@{
+    var companySettings = HotelDataService.getCompanySettings();
+    var companyName = companySettings.CompanyName;
+    var companySubtitle = companySettings.CompanySubtitle;
+    var logoText = string.IsNullOrWhiteSpace(companyName) ? "H" : companyName.Substring(0, 1).ToUpperInvariant();
+    var logoImageUrl = HotelDataService.normalizeLogoImageUrl(companySettings.LogoImageUrl);
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Gite_Planning</title>
+
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/calendar.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/calendar-responsive.css" asp-append-version="true" />
+</head>
+<body>
+    <header>
+        <nav class="navbar navbar-expand-sm navbar-light bg-white border-bottom box-shadow mb-3">
+            <div class="container">
+                <div class="brand-block">
+                    <div class="brand-logo" aria-label="Logo entreprise">
+                        @if (!string.IsNullOrWhiteSpace(logoImageUrl) && logoImageUrl != "/images/logo-hotelia.svg")
+                        {
+                            <img src="@logoImageUrl" alt="@companyName" />
+                        }
+                        else
+                        {
+                            @logoText
+                        }
+                    </div>
+                    <div class="brand-text">
+                        <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">@companyName</a>
+                        <span class="brand-subtitle">@companySubtitle</span>
+                    </div>
+                </div>
+
+                <div class="hotel-actions" aria-label="Actions hôtel">
+                    <a class="btn btn-sm btn-primary" href="/Hotel/CreateReservation?date=@DateTime.Today.ToString("yyyy-MM-dd")">+ Réservation</a>
+                    <a class="btn btn-sm btn-success" href="/Hotel/CreateRoom">+ Chambre</a>
+                    <a class="btn btn-sm btn-secondary" href="/Hotel/Rooms">Chambres</a>
+                    <a class="btn btn-sm btn-warning" href="/Hotel/Reservations">Réservations</a>
+                    <a class="btn btn-sm btn-info" href="/Hotel/Hosts">Hébergeurs</a>
+                    <a class="btn btn-sm btn-outline-dark" href="/Hotel/CompanySettings">Paramétrage</a>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <nav class="mobile-shortcuts" aria-label="Raccourcis rapides">
+        <a class="shortcut-btn primary" href="/Hotel/CreateRoom">+ Chambre</a>
+        <a class="shortcut-btn success" href="/Hotel/CreateReservation?date=@DateTime.Today.ToString("yyyy-MM-dd")">+ Réservation</a>
+        <a class="shortcut-btn secondary" href="/Hotel/Rooms">Chambres</a>
+        <a class="shortcut-btn warning" href="/Hotel/Reservations">Réservations</a>
+        <a class="shortcut-btn info" href="/Hotel/Hosts">Hébergeurs</a>
+        <a class="shortcut-btn dark" href="/Hotel/CompanySettings">Paramétrage</a>
+    </nav>
+
+    <div class="container">
+        <main role="main" class="pb-3">
+            @RenderBody()
+        </main>
+    </div>
+
+    <footer class="border-top footer text-muted">
+        <div class="container">
+            &copy; 2026 - Calendrier local - <a asp-area="" asp-controller="Home" asp-action="Privacy">Confidentialité</a>
+        </div>
+    </footer>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script src="~/js/site.js" asp-append-version="true"></script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

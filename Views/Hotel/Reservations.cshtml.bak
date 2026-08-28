@@ -1,0 +1,683 @@
+@model (List<Gite_Planning.Models.Reservation>, List<Gite_Planning.Models.Room>)
+@{
+    ViewData["Title"] = "Gestion des réservations";
+    var reservations = Model.Item1;
+    var rooms = Model.Item2;
+    var selectedDay = Context.Request.Query["day"].ToString();
+    var selectedRoomId = Context.Request.Query["roomId"].ToString();
+    var selectedFromDate = Context.Request.Query["fromDate"].ToString();
+    var selectedToDate = Context.Request.Query["toDate"].ToString();
+    var selectedName = Context.Request.Query["name"].ToString();
+    
+    // Grouper les réservations par GroupId
+    var groupedReservations = reservations
+        .Where(r => r.Status != "cancelled")
+        .GroupBy(r => r.GroupId == 0 ? r.Id : r.GroupId)
+        .Select(g => new {
+            GroupId = g.Key,
+            Reservations = g.OrderBy(r => r.Id).ToList(),
+            FirstRes = g.OrderBy(r => r.Id).First()
+        })
+        .OrderByDescending(g => g.FirstRes.ArrivalDate)
+        .ToList();
+}
+
+<div class="hotel-container">
+    <div class="section-header">
+        <h1>📅 Gestion des réservations</h1>
+        <div class="section-actions">
+            <a href="/Hotel/CreateReservation" class="btn btn-primary btn-lg">+ Nouvelle réservation</a>
+            <a href="/Hotel/ExportReservationsCsv" class="btn btn-success btn-lg">Export CSV</a>
+            <form asp-controller="Hotel" asp-action="ImportReservationsCsv" method="post" enctype="multipart/form-data" class="import-form">
+                <input type="file" name="file" accept=".csv,text/csv" class="form-control-file" />
+                <button type="submit" class="btn btn-secondary btn-lg">Import CSV</button>
+            </form>
+            <form asp-controller="Hotel" asp-action="ClearReservations" method="post" onsubmit="return confirm('Réinitialiser toutes les réservations ? Cette action est irréversible.')">
+                <button type="submit" class="btn btn-danger btn-lg">RAZ</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="filter-panel">
+        <div class="filter-header">
+            <h2>Filtrer les réservations</h2>
+            <a href="/Hotel/Reservations" class="btn btn-light">Réinitialiser</a>
+        </div>
+
+        <form method="get" action="/Hotel/Reservations" class="filter-form">
+            <div class="filter-grid">
+                <div class="field-group">
+                    <label for="day">Par jour</label>
+                    <input id="day" name="day" type="date" value="@selectedDay" />
+                </div>
+
+                <div class="field-group">
+                    <label for="roomId">Par chambre</label>
+                    <select id="roomId" name="roomId">
+                        <option value="">Toutes les chambres</option>
+                        @foreach (var room in rooms)
+                        {
+                            if (selectedRoomId == room.Id.ToString())
+                            {
+                                <option value="@room.Id" selected="selected">@room.Name</option>
+                            }
+                            else
+                            {
+                                <option value="@room.Id">@room.Name</option>
+                            }
+                        }
+                    </select>
+                </div>
+
+                <div class="field-group">
+                    <label for="fromDate">Période du</label>
+                    <input id="fromDate" name="fromDate" type="date" value="@selectedFromDate" />
+                </div>
+
+                <div class="field-group">
+                    <label for="toDate">au</label>
+                    <input id="toDate" name="toDate" type="date" value="@selectedToDate" />
+                </div>
+
+                <div class="field-group field-group-wide">
+                    <label for="name">Par nom</label>
+                    <input id="name" name="name" type="text" value="@selectedName" placeholder="Nom ou prénom" />
+                </div>
+            </div>
+
+            <div class="filter-actions">
+                <button type="submit" class="btn btn-primary">Appliquer</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="filter-summary">
+        @if (groupedReservations.Count == 0)
+        {
+            <p>Aucune réservation ne correspond aux filtres sélectionnés.</p>
+        }
+        else
+        {
+            <p>@groupedReservations.Count réservation(s) affichée(s)</p>
+        }
+    </div>
+
+    @if (groupedReservations.Count == 0)
+    {
+        <div class="empty-state">
+            <p>Aucune réservation</p>
+        </div>
+    }
+    else
+    {
+        <table class="reservations-table">
+            <thead>
+                <tr>
+                    <th>Client</th>
+                    <th>Arrivée</th>
+                    <th>Départ</th>
+                    <th>Nuits</th>
+                    <th>Chambres</th>
+                    <th>Lits</th>
+                    <th>Contact</th>
+                    <th>Tarif</th>
+                    <th>Total</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var group in groupedReservations)
+                {
+                    var firstRes = group.FirstRes;
+                    var isCombined = group.Reservations.Count > 1;
+                    var totalBeds = group.Reservations.Sum(r => r.ReservedBeds);
+                    var totalPrice = group.Reservations.Sum(r => r.TotalPrice);
+                    var roomNames = string.Join(" + ", group.Reservations.Select(r => r.RoomName));
+                    
+                    <tr class="@(isCombined ? "row-combined" : "")">
+                        <td class="client-name">
+                            <strong>@firstRes.FirstName @firstRes.LastName</strong>
+                        </td>
+                        <td class="date-arrival">
+                            @firstRes.ArrivalDate.ToString("ddd dd/MM")
+                        </td>
+                        <td class="date-departure">
+                            @firstRes.DepartureDate.ToString("ddd dd/MM")
+                        </td>
+                        <td class="nights-count">
+                            @firstRes.NumberOfNights
+                        </td>
+                        <td class="rooms-list">
+                            @if (isCombined)
+                            {
+                                <span class="badge-multi">@group.Reservations.Count</span>
+                            }
+                            @roomNames
+                        </td>
+                        <td class="beds-count">
+                            @if (isCombined)
+                            {
+                                <span class="total-beds">@totalBeds</span>
+                                <div class="beds-detail">
+                                    @foreach (var res in group.Reservations)
+                                    {
+                                        <span>@res.RoomName: @res.ReservedBeds</span>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <span>@firstRes.ReservedBeds</span>
+                            }
+                        </td>
+                        <td class="contact-info">
+                            @if (!string.IsNullOrWhiteSpace(firstRes.PhoneNumber))
+                            {
+                                <div><a href="tel:@firstRes.PhoneNumber">@firstRes.PhoneNumber</a></div>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(firstRes.Email))
+                            {
+                                <div><a href="mailto:@firstRes.Email">@firstRes.Email</a></div>
+                            }
+                        </td>
+                        <td class="price-type">
+                            @(firstRes.PriceType switch {
+                                "semi-pension" => "Demi-pension",
+                                "night-breakfast" => "Nuit + PDJ",
+                                "night-meal" => "Nuit + Repas",
+                                "simple-night" => "Nuit seule",
+                                _ => firstRes.PriceType
+                            })
+                        </td>
+                        <td class="total-price">
+                            @totalPrice.ToString("F2")€
+                        </td>
+                        <td class="actions">
+                            <a asp-controller="Hotel" asp-action="EditReservation" asp-route-id="@firstRes.Id" class="btn btn-sm btn-edit" title="Modifier">✏️</a>
+                            <form asp-controller="Hotel" asp-action="CancelReservation" asp-route-id="@firstRes.Id" method="post" class="form-inline" onsubmit="return confirm('Annuler cette réservation ?')">
+                                <button type="submit" class="btn btn-sm btn-delete" title="Annuler">🗑️</button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+                    
+                    <div class="reservation-body">
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <strong>📞 Téléphone:</strong>
+                                <div class="contact-details">
+                                    <span class="contact-value">@reservation.PhoneNumber</span>
+                                    <div class="contact-actions" aria-label="Actions pour le numéro @reservation.PhoneNumber">
+                                        <a href="sms:@reservation.PhoneNumber" class="contact-action contact-action-message" title="Envoyer un message à @reservation.PhoneNumber">💬 Message</a>
+                                        <a href="tel:@reservation.PhoneNumber" class="contact-action contact-action-call" title="Appeler @reservation.PhoneNumber">📞 Appeler</a>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="info-item">
+                                <strong>📧 Email:</strong>
+                                <div class="contact-details">
+                                    <span class="contact-value">@reservation.Email</span>
+                                    <div class="contact-actions" aria-label="Actions pour l’adresse e-mail @reservation.Email">
+                                        <a href="mailto:@reservation.Email" class="contact-action contact-action-email" title="Envoyer un e-mail à @reservation.Email">✉️ Envoyer un e-mail</a>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="info-item">
+                                <strong>📍 Arrivée:</strong>
+                                <span>@reservation.ArrivalDate.ToString("dd/MM/yyyy")</span>
+                            </div>
+                            <div class="info-item">
+                                <strong>🚪 Départ:</strong>
+                                <span>@reservation.DepartureDate.ToString("dd/MM/yyyy")</span>
+                            </div>
+                            <div class="info-item">
+                                <strong>🌙 Nuits:</strong>
+                                <span>@reservation.NumberOfNights</span>
+                            </div>
+                            <div class="info-item">
+                                <strong>�️ Lits:</strong>
+                                <span>@reservation.ReservedBeds</span>
+                            </div>
+                            <div class="info-item">
+                                <strong>�💰 Type:</strong>
+                                <span>
+                                    @(reservation.PriceType switch
+                                    {
+                                        "semi-pension" => "Demi-pension",
+                                        "night-breakfast" => "Nuitée + petit-déjeuner",
+                                        "night-meal" => "Nuitée + repas",
+                                        "simple-night" => "Nuitée seule",
+                                        _ => reservation.PriceType
+                                    })
+                                </span>
+                            </div>
+                            <div class="info-item">
+                                <strong>💵 Total:</strong>
+                                <span class="price">@reservation.TotalPrice.ToString("0.00")€</span>
+                            </div>
+                        </div>
+                        
+                        @if (!string.IsNullOrEmpty(reservation.Comment))
+                        {
+                            <div class="comment-section">
+                                <strong>💬 Commentaire:</strong>
+                                <p>@reservation.Comment</p>
+                            </div>
+                        }
+                    </div>
+                    
+                    <div class="reservation-actions">
+                        @if (reservation.Status != "cancelled")
+                        {
+                            <a href="/Hotel/EditReservation/@reservation.Id" class="btn btn-sm btn-warning">Modifier</a>
+                            <form asp-controller="Hotel" asp-action="CancelReservation" method="post" style="display:inline;" onsubmit="return confirm('Annuler cette réservation ?')">
+                                <input type="hidden" name="id" value="@reservation.Id">
+                                <button type="submit" class="btn btn-sm btn-danger">Annuler</button>
+                            </form>
+                        }
+                        else
+                        {
+                            <span class="cancelled-notice">Réservation annulée le @reservation.UpdatedAt.ToString("dd/MM/yyyy")</span>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<style>
+.hotel-container {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 0 1rem 2rem;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    border-bottom: 2px solid #4f46e5;
+    padding-bottom: 1rem;
+    gap: 1rem;
+}
+
+.section-header h1 {
+    margin: 0;
+    color: #1f2937;
+}
+
+.section-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.import-form {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.form-control-file {
+    max-width: 220px;
+    padding: 0.45rem 0.75rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: white;
+}
+
+
+.filter-panel {
+    background: #f8fafc;
+    border: 1px solid #dfe7f4;
+    border-radius: 12px;
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+}
+
+.filter-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.filter-header h2 {
+    margin: 0;
+    font-size: 1.15rem;
+    color: #1f2937;
+}
+
+.filter-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.filter-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+}
+
+.field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+}
+
+.field-group-wide {
+    grid-column: span 2;
+}
+
+.field-group label {
+    font-weight: 600;
+    color: #374151;
+}
+
+.field-group input,
+.field-group select {
+    width: 100%;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 0.7rem 0.8rem;
+    font-size: 0.95rem;
+    background: white;
+}
+
+.filter-actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.filter-summary {
+    margin-bottom: 1rem;
+    color: #374151;
+    font-weight: 600;
+}
+
+.reservations-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.reservation-card {
+    background: white;
+    border-left: 4px solid #10b981;
+    border: 1px solid #dfe7f4;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px rgba(31, 41, 55, 0.1);
+}
+
+.reservation-card.status-cancelled {
+    opacity: 0.6;
+    border-left-color: #ef4444;
+}
+
+.reservation-header {
+    background: linear-gradient(135deg, #f8fafc 0%, #f0f4ff 100%);
+    padding: 1.25rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    border-bottom: 1px solid #dfe7f4;
+}
+
+.guest-info h3 {
+    margin: 0 0 0.5rem 0;
+    color: #1f2937;
+    font-size: 1.2rem;
+}
+
+.room-badge {
+    display: inline-block;
+    background: #e0e7ff;
+    color: #4f46e5;
+    padding: 0.35rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.status-badge {
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.status-confirmed {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.status-pending {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.status-cancelled {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.reservation-body {
+    padding: 1.5rem;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.info-item strong {
+    color: #4f46e5;
+    font-size: 0.9rem;
+}
+
+.info-item span {
+    color: #1f2937;
+}
+
+.contact-details {
+    position: relative;
+    width: fit-content;
+    max-width: 100%;
+}
+
+.contact-value {
+    display: inline-block;
+    padding: 0.15rem 0.35rem;
+    margin: -0.15rem -0.35rem;
+    border-radius: 4px;
+    cursor: default;
+}
+
+.contact-details:hover .contact-value,
+.contact-details:focus-within .contact-value {
+    background: #eef2ff;
+}
+
+.contact-actions {
+    position: absolute;
+    z-index: 10;
+    top: calc(100% + 0.4rem);
+    left: 0;
+    display: flex;
+    gap: 0.4rem;
+    width: max-content;
+    max-width: min(280px, calc(100vw - 3rem));
+    padding: 0.45rem;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    box-shadow: 0 8px 16px rgba(31, 41, 55, 0.15);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-4px);
+    transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s ease;
+}
+
+.contact-details:hover .contact-actions,
+.contact-details:focus-within .contact-actions {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.contact-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.4rem 0.6rem;
+    border-radius: 6px;
+    color: #ffffff;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.contact-action:hover,
+.contact-action:focus {
+    color: #ffffff;
+    filter: brightness(0.92);
+}
+
+.contact-action-message {
+    background: #0ea5e9;
+}
+
+.contact-action-call {
+    background: #16a34a;
+}
+
+.contact-action-email {
+    background: #4f46e5;
+}
+
+@@media (hover: none) {
+    .contact-actions {
+        position: static;
+        width: auto;
+        max-width: none;
+        margin-top: 0.5rem;
+        padding: 0;
+        border: 0;
+        box-shadow: none;
+        opacity: 1;
+        visibility: visible;
+        transform: none;
+    }
+}
+
+.price {
+    color: #10b981;
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+.comment-section {
+    background: #f8fafc;
+    border-left: 3px solid #4f46e5;
+    padding: 1rem;
+    border-radius: 6px;
+    margin-top: 1rem;
+}
+
+.comment-section p {
+    margin: 0.5rem 0 0 0;
+    color: #1f2937;
+}
+
+.reservation-actions {
+    background: #f8fafc;
+    padding: 1rem;
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    border-top: 1px solid #dfe7f4;
+}
+
+.cancelled-notice {
+    color: #6b7280;
+    font-style: italic;
+}
+
+.btn {
+    padding: 0.6rem 1rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-primary {
+    background: #4f46e5;
+    color: white;
+}
+
+.btn-success {
+    background: #16a34a;
+    color: white;
+}
+
+.btn-secondary {
+    background: #475569;
+    color: white;
+}
+
+.btn-light {
+    background: white;
+    border: 1px solid #cbd5e1;
+    color: #1f2937;
+}
+
+.btn-warning {
+    background: #f59e0b;
+    color: white;
+}
+
+.btn-danger {
+    background: #ef4444;
+    color: white;
+}
+
+.btn-sm {
+    padding: 0.45rem 0.8rem;
+    font-size: 0.85rem;
+}
+
+.btn-lg {
+    padding: 0.75rem 1.1rem;
+    font-size: 1rem;
+}
+
+.empty-state {
+    background: #f8fafc;
+    border: 1px dashed #cbd5e1;
+    border-radius: 10px;
+    padding: 2rem;
+    text-align: center;
+    color: #475569;
+}

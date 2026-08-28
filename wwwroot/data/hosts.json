@@ -1,0 +1,37 @@
+[
+  {
+    "Id": 1,
+    "Name": "G\u00EEte d\u0027\u00E9tape l\u0027Abeille Lulu \u00E0 Lauzerte",
+    "PhoneNumber": "06 87 05 53 60",
+    "Email": "abeillelulu82@gmail.com",
+    "Address": "1, chemin de la Fontaine 82110 Lauzerte"
+  },
+  {
+    "Id": 2,
+    "Name": "G\u00EEte des Figuiers",
+    "PhoneNumber": "06 85 31 71 31",
+    "Email": "accueil@lesfiguiers-lauzerte.com",
+    "Address": "25 Chemin du Coudouni\u00E9 82110 Lauzerte"
+  },
+  {
+    "Id": 3,
+    "Name": "G\u00EEte Fleuri du Tuc de Saint-Paul",
+    "PhoneNumber": "06 32 14 64 95",
+    "Email": "bourrieresmelanie@gmail.com",
+    "Address": "269, route de Saint-Laurent Lolmie 82110 Lauzerte"
+  },
+  {
+    "Id": 4,
+    "Name": "La Luciole du Chemin",
+    "PhoneNumber": "07-78-47-63-77",
+    "Email": "lalucioleduchemin@icloud.com",
+    "Address": "3 rue de la Br\u00E8che 82110 Lauzerte"
+  },
+  {
+    "Id": 5,
+    "Name": "G\u00EEte Chez Serge",
+    "PhoneNumber": "06-72-24-19-85",
+    "Email": "serge.pradin@orange.fr",
+    "Address": "32 rue de la Garrigue 82110 Lauzerte"
+  }
+]

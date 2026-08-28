@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-label="Hotelia logo">
+  <rect width="160" height="160" rx="28" fill="#0d6efd"/>
+  <path d="M40 110V52h24c18 0 28 10 28 24s-10 24-28 24H52v10h-12zm12-12h12c9 0 15-5 15-14s-6-14-15-14H52v28z" fill="#ffffff"/>
+  <path d="M80 52h16l18 58h-12l-3-10H83l-3 10H68l18-58zm9 16-5 18h10l-5-18z" fill="#dfeeff"/>
+  <rect x="118" y="52" width="12" height="58" rx="6" fill="#ffffff"/>
+  <rect x="112" y="102" width="24" height="12" rx="6" fill="#ffffff"/>
+</svg>

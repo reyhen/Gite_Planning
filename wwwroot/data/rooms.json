@@ -1,0 +1,38 @@
+[
+  {
+    "Id": 1,
+    "Name": "orange",
+    "NumberOfBeds": 6,
+    "SemiPensionPrice": 41,
+    "NightWithBreakfastPrice": 25,
+    "NightWithMealPrice": 35,
+    "SimpleNightPrice": 19,
+    "Description": "dortoir",
+    "IsActive": true,
+    "CreatedAt": "2026-08-15T14:22:00.551568Z"
+  },
+  {
+    "Id": 2,
+    "Name": "ocre",
+    "NumberOfBeds": 3,
+    "SemiPensionPrice": 53,
+    "NightWithBreakfastPrice": 37,
+    "NightWithMealPrice": 47,
+    "SimpleNightPrice": 31,
+    "Description": "chambre d\u0027h\u00F4tes avec SDB privative",
+    "IsActive": true,
+    "CreatedAt": "2026-08-16T08:19:04.5857071Z"
+  },
+  {
+    "Id": 3,
+    "Name": "verte",
+    "NumberOfBeds": 3,
+    "SemiPensionPrice": 51,
+    "NightWithBreakfastPrice": 35,
+    "NightWithMealPrice": 45,
+    "SimpleNightPrice": 29,
+    "Description": "chambre avec sanitaire commun",
+    "IsActive": true,
+    "CreatedAt": "2026-08-16T09:18:17.219469Z"
+  }
+]

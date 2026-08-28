@@ -1,0 +1,233 @@
+@model List<Gite_Planning.Models.Room>
+@{
+    ViewData["Title"] = "Gestion des chambres";
+}
+
+<div class="hotel-container">
+    <div class="section-header">
+        <h1>📋 Gestion des chambres</h1>
+        <div class="section-actions">
+            <a href="/Hotel/CreateRoom" class="btn btn-primary btn-lg">+ Ajouter une chambre</a>
+            <form asp-controller="Hotel" asp-action="ClearRooms" method="post" style="display:inline;" onsubmit="return confirm('Réinitialiser toutes les chambres ? Cette action est irréversible.')">
+                <button type="submit" class="btn btn-danger btn-lg">RAZ</button>
+            </form>
+        </div>
+    </div>
+
+    @if (Model.Count == 0)
+    {
+        <div class="empty-state">
+            <p>Aucune chambre enregistrée</p>
+        </div>
+    }
+    else
+    {
+        <div class="rooms-grid">
+            @foreach (var room in Model)
+            {
+                <div class="room-card">
+                    <div class="room-header">
+                        <h2>@room.Name</h2>
+                        <span class="badge badge-info">@room.NumberOfBeds lit@(room.NumberOfBeds > 1 ? "s" : "")</span>
+                    </div>
+                    
+                    <div class="room-prices">
+                        <div class="price-item">
+                            <strong>Demi-pension:</strong>
+                            <span class="price">@room.SemiPensionPrice.ToString("0.00")€</span>
+                        </div>
+                        <div class="price-item">
+                            <strong>Nuitée + petit-déj:</strong>
+                            <span class="price">@room.NightWithBreakfastPrice.ToString("0.00")€</span>
+                        </div>
+                        <div class="price-item">
+                            <strong>Nuitée + repas:</strong>
+                            <span class="price">@room.NightWithMealPrice.ToString("0.00")€</span>
+                        </div>
+                        <div class="price-item">
+                            <strong>Nuitée simple:</strong>
+                            <span class="price">@room.SimpleNightPrice.ToString("0.00")€</span>
+                        </div>
+                    </div>
+                    
+                    @if (!string.IsNullOrEmpty(room.Description))
+                    {
+                        <p class="description">@room.Description</p>
+                    }
+                    
+                    <div class="room-actions">
+                        <a href="/Hotel/RoomDetail/@room.Id" class="btn btn-info">Détails</a>
+                        <a href="/Hotel/EditRoom/@room.Id" class="btn btn-warning">Modifier</a>
+                        <form asp-controller="Hotel" asp-action="DeleteRoom" method="post" style="display:inline;" onsubmit="return confirm('Confirmer la suppression ?')">
+                            <input type="hidden" name="id" value="@room.Id">
+                            <button type="submit" class="btn btn-danger">Supprimer</button>
+                        </form>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<style>
+.hotel-container {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    border-bottom: 2px solid #4f46e5;
+    padding-bottom: 1rem;
+}
+
+.section-header h1 {
+    margin: 0;
+    color: #1f2937;
+}
+
+.section-actions {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.rooms-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 1.5rem;
+}
+
+.room-card {
+    background: white;
+    border: 1px solid #dfe7f4;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px rgba(31, 41, 55, 0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.room-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 12px rgba(31, 41, 55, 0.15);
+}
+
+.room-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    margin-bottom: 1rem;
+}
+
+.room-header h2 {
+    margin: 0;
+    color: #1f2937;
+    font-size: 1.3rem;
+}
+
+.badge {
+    display: inline-block;
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.badge-info {
+    background: #e0e7ff;
+    color: #4f46e5;
+}
+
+.room-prices {
+    background: #f8fafc;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.price-item {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+    font-size: 0.95rem;
+}
+
+.price-item:last-child {
+    margin-bottom: 0;
+}
+
+.price {
+    color: #059669;
+    font-weight: 700;
+}
+
+.description {
+    color: #6b7280;
+    font-size: 0.95rem;
+    margin: 1rem 0;
+}
+
+.room-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.btn {
+    padding: 0.6rem 1rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+}
+
+.btn-primary {
+    background: #4f46e5;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #4338ca;
+}
+
+.btn-lg {
+    padding: 0.8rem 1.5rem;
+    font-size: 1rem;
+}
+
+.btn-info {
+    background: #0ea5e9;
+    color: white;
+    flex: 1;
+    min-width: 80px;
+}
+
+.btn-warning {
+    background: #f59e0b;
+    color: white;
+    flex: 1;
+    min-width: 80px;
+}
+
+.btn-danger {
+    background: #ef4444;
+    color: white;
+    flex: 1;
+    min-width: 80px;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: #6b7280;
+}
+</style>

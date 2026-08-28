@@ -1,0 +1,32 @@
+@media (max-width: 767px) {
+    .calendar-shell {
+        padding: 0 0.5rem;
+    }
+
+    .calendar-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+
+    .calendar-actions {
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .calendar-grid {
+        min-width: 620px;
+        overflow-x: auto;
+    }
+
+    .day-cell {
+        min-height: 105px;
+    }
+
+    .day-detail-dialog {
+        width: min(94vw, 520px);
+    }
+}

@@ -1,0 +1,345 @@
+@model (Gite_Planning.Models.Room, List<Gite_Planning.Models.Reservation>)
+@{
+    ViewData["Title"] = "Détails de la chambre";
+    var room = Model.Item1;
+    var reservations = Model.Item2.Where(r => r.Status != "cancelled").OrderBy(r => r.ArrivalDate).ToList();
+}
+
+<div class="hotel-container">
+    <div class="back-button">
+        <a href="/Hotel/Rooms" class="btn btn-secondary">← Retour</a>
+    </div>
+    
+    <div class="room-detail-wrapper">
+        <div class="room-detail-header">
+            <div class="room-title-section">
+                <h1>@room.Name</h1>
+                <p class="room-subtitle">@room.NumberOfBeds lit@(room.NumberOfBeds > 1 ? "s" : "")</p>
+            </div>
+            <div class="room-detail-actions">
+                <a href="/Hotel/EditRoom/@room.Id" class="btn btn-warning">Modifier</a>
+                <form asp-controller="Hotel" asp-action="DeleteRoom" method="post" style="display:inline;" onsubmit="return confirm('Confirmer la suppression ?')">
+                    <input type="hidden" name="id" value="@room.Id">
+                    <button type="submit" class="btn btn-danger">Supprimer</button>
+                </form>
+            </div>
+        </div>
+        
+        <div class="room-detail-content">
+            <div class="prices-card">
+                <h2>💰 Tarifs</h2>
+                <div class="price-list">
+                    <div class="price-row">
+                        <span>Demi-pension</span>
+                        <strong>@room.SemiPensionPrice.ToString("0.00")€</strong>
+                    </div>
+                    <div class="price-row">
+                        <span>Nuitée + petit-déj</span>
+                        <strong>@room.NightWithBreakfastPrice.ToString("0.00")€</strong>
+                    </div>
+                    <div class="price-row">
+                        <span>Nuitée + repas</span>
+                        <strong>@room.NightWithMealPrice.ToString("0.00")€</strong>
+                    </div>
+                    <div class="price-row">
+                        <span>Nuitée simple</span>
+                        <strong>@room.SimpleNightPrice.ToString("0.00")€</strong>
+                    </div>
+                </div>
+            </div>
+            
+            @if (!string.IsNullOrEmpty(room.Description))
+            {
+                <div class="description-card">
+                    <h2>📝 Description</h2>
+                    <p>@room.Description</p>
+                </div>
+            }
+            
+            <div class="reservations-card">
+                <div class="reservations-header">
+                    <h2>📅 Réservations (@reservations.Count)</h2>
+                    <a href="/Hotel/CreateReservation" class="btn btn-primary btn-sm">+ Nouvelle</a>
+                </div>
+                
+                @if (reservations.Count == 0)
+                {
+                    <p class="empty-message">Aucune réservation pour cette chambre</p>
+                }
+                else
+                {
+                    <div class="reservations-timeline">
+                        @foreach (var res in reservations)
+                        {
+                            <div class="timeline-item">
+                                <div class="timeline-date">
+                                    <strong>@res.ArrivalDate.ToString("dd/MM")</strong>
+                                    <span>au</span>
+                                    <strong>@res.DepartureDate.ToString("dd/MM")</strong>
+                                </div>
+                                <div class="timeline-guest">
+                                    <strong>@res.FirstName @res.LastName</strong>
+                                    <span class="guest-meta">@res.NumberOfNights nuits • @res.PhoneNumber</span>
+                                </div>
+                                <div class="timeline-actions">
+                                    <a href="/Hotel/EditReservation/@res.Id" class="btn btn-sm btn-info">Modifier</a>
+                                    <form asp-controller="Hotel" asp-action="CancelReservation" method="post" style="display:inline;" onsubmit="return confirm('Annuler ?')">
+                                        <input type="hidden" name="id" value="@res.Id">
+                                        <button type="submit" class="btn btn-sm btn-danger">Annuler</button>
+                                    </form>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.hotel-container {
+    max-width: 1000px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+.back-button {
+    margin-bottom: 1.5rem;
+}
+
+.room-detail-wrapper {
+    background: white;
+    border: 1px solid #dfe7f4;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(31, 41, 55, 0.1);
+}
+
+.room-detail-header {
+    background: linear-gradient(135deg, #f0f4ff 0%, #f8fafc 100%);
+    padding: 2rem;
+    border-bottom: 2px solid #4f46e5;
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+}
+
+.room-title-section h1 {
+    margin: 0;
+    color: #1f2937;
+    font-size: 2rem;
+}
+
+.room-subtitle {
+    margin: 0.5rem 0 0 0;
+    color: #6b7280;
+    font-size: 1.1rem;
+}
+
+.room-detail-actions {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.room-detail-content {
+    padding: 2rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.prices-card,
+.description-card,
+.reservations-card {
+    background: #f8fafc;
+    border: 1px solid #dfe7f4;
+    border-radius: 8px;
+    padding: 1.5rem;
+}
+
+.prices-card {
+    grid-column: 1;
+}
+
+.prices-card h2,
+.description-card h2 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    color: #1f2937;
+    border-bottom: 2px solid #4f46e5;
+    padding-bottom: 0.5rem;
+}
+
+.price-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.price-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #dfe7f4;
+}
+
+.price-row:last-child {
+    border-bottom: none;
+}
+
+.price-row strong {
+    color: #10b981;
+    font-size: 1.1rem;
+}
+
+.description-card {
+    grid-column: 2;
+}
+
+.description-card p {
+    margin: 0;
+    color: #1f2937;
+    line-height: 1.6;
+}
+
+.reservations-card {
+    grid-column: 1 / -1;
+}
+
+.reservations-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    border-bottom: 2px solid #4f46e5;
+    padding-bottom: 0.75rem;
+}
+
+.reservations-header h2 {
+    margin: 0;
+    color: #1f2937;
+}
+
+.empty-message {
+    text-align: center;
+    color: #6b7280;
+    padding: 2rem;
+}
+
+.reservations-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.timeline-item {
+    background: white;
+    border: 1px solid #dfe7f4;
+    border-left: 4px solid #4f46e5;
+    border-radius: 6px;
+    padding: 1rem;
+    display: grid;
+    grid-template-columns: 150px 1fr auto;
+    gap: 1rem;
+    align-items: center;
+}
+
+.timeline-date {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.timeline-date strong {
+    color: #4f46e5;
+}
+
+.timeline-date span {
+    color: #6b7280;
+    font-size: 0.85rem;
+}
+
+.timeline-guest {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.timeline-guest strong {
+    color: #1f2937;
+}
+
+.guest-meta {
+    color: #6b7280;
+    font-size: 0.85rem;
+}
+
+.timeline-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn {
+    padding: 0.6rem 1rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+}
+
+.btn-sm {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+}
+
+.btn-primary {
+    background: #4f46e5;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #4338ca;
+}
+
+.btn-secondary {
+    background: #e5e7eb;
+    color: #1f2937;
+}
+
+.btn-secondary:hover {
+    background: #d1d5db;
+}
+
+.btn-warning {
+    background: #f59e0b;
+    color: white;
+}
+
+.btn-warning:hover {
+    background: #d97706;
+}
+
+.btn-danger {
+    background: #ef4444;
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #dc2626;
+}
+
+.btn-info {
+    background: #0ea5e9;
+    color: white;
+}
+
+.btn-info:hover {
+    background: #0284c7;
+}
+</style>

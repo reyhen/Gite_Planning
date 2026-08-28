@@ -1,0 +1,2 @@
+Id;RoomId;RoomName;FirstName;LastName;PhoneNumber;Email;ArrivalDate;DepartureDate;NumberOfNights;ReservedBeds;PriceType;TotalPrice;Comment;Status;CreatedAt;UpdatedAt
+5;3;verte;jean;HENRIET;660822538;rhenriet82@gmail.com;27/08/2026;28/08/2026;1;1;semi-pension;51;australien;confirmed;2026-08-16T10:05:20Z;2026-08-16T11:01:08Z

@@ -1,0 +1,513 @@
+@model Gite_Planning.Models.CalendarMonthView
+@{
+    ViewData["Title"] = "Calendrier";
+}
+
+<div class="calendar-shell">
+    <div class="calendar-header">
+        <h1>@Model.MonthLabel</h1>
+        <div class="calendar-actions">
+            <button type="button" class="btn btn-outline-primary btn-prev-month">Précédent</button>
+            <button type="button" class="btn btn-primary btn-today">Aujourd'hui</button>
+            <button type="button" class="btn btn-outline-primary btn-next-month">Suivant</button>
+        </div>
+    </div>
+
+    <div class="mobile-calendar-view-switcher" role="group" aria-label="Affichage du calendrier">
+        <button type="button" class="btn btn-outline-primary mobile-calendar-view-button is-active" data-calendar-view="day" aria-pressed="true">Jour</button>
+        <button type="button" class="btn btn-outline-primary mobile-calendar-view-button" data-calendar-view="month" aria-pressed="false">Mois</button>
+    </div>
+
+    <div class="calendar-grid" aria-label="Calendrier">
+        @foreach (var dayName in new[] { "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim" })
+        {
+            <div class="day-name">@dayName</div>
+        }
+
+        @foreach (var day in Model.Days)
+        {
+            var bookingsJson = System.Text.Json.JsonSerializer.Serialize(day.Reservations.Select(r => new
+            {
+                id = r.Id,
+                firstName = r.FirstName,
+                lastName = r.LastName,
+                roomName = r.RoomName,
+                arrivalDate = r.ArrivalDate.ToString("yyyy-MM-dd"),
+                departureDate = r.DepartureDate.ToString("yyyy-MM-dd"),
+                nights = r.NumberOfNights,
+                priceType = r.PriceType,
+                reservedBeds = r.ReservedBeds,
+                comment = r.Comment,
+                phone = r.PhoneNumber,
+                email = r.Email
+            }));
+
+            <div class="day-cell @(day.InMonth ? "in-month" : "out-month") day-status-@day.Status"
+                 data-date="@day.Date.ToString("yyyy-MM-dd")"
+                 data-bookings='@Html.Raw(bookingsJson)'
+                 style="cursor:pointer;">
+                <div class="day-header">
+                    <div class="day-number">@day.Date.Day</div>
+                    <span class="availability-badge">@day.AvailableBeds lits</span>
+                </div>
+                <div class="day-occupancy">@day.OccupancyPercent.ToString("0.0")% occupé</div>
+                @if (day.Reservations.Length > 0)
+                {
+                    <div class="reservation-mini-count">@day.Reservations.Length réservation(s)</div>
+                }
+            </div>
+        }
+    </div>
+
+    <div id="dayDetailModal" class="day-detail-modal hidden" aria-hidden="true">
+        <div class="day-detail-backdrop" data-close="true"></div>
+        <div class="day-detail-dialog" role="dialog" aria-modal="true" aria-labelledby="dayDetailTitle">
+            <div class="day-detail-header">
+                <h2 id="dayDetailTitle">Jour</h2>
+                <button type="button" class="close-day-detail" aria-label="Fermer">×</button>
+            </div>
+            <div id="dayDetailContent" class="day-detail-content"></div>
+            <div class="day-detail-actions">
+                <button type="button" class="btn btn-secondary close-day-detail">Fermer</button>
+                <a id="createReservationLink" href="#" class="btn btn-primary">Nouvelle réservation</a>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script src="/js/calendar.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const calendarShell = document.querySelector('.calendar-shell');
+        const modal = document.getElementById('dayDetailModal');
+        const content = document.getElementById('dayDetailContent');
+        const title = document.getElementById('dayDetailTitle');
+        const createButton = document.getElementById('createReservationLink');
+
+        function setMobileCalendarView(view) {
+            if (!calendarShell) return;
+
+            calendarShell.dataset.mobileCalendarView = view;
+            localStorage.setItem('mobileCalendarView', view);
+
+            document.querySelectorAll('.mobile-calendar-view-button').forEach(button => {
+                const active = button.dataset.calendarView === view;
+                button.classList.toggle('is-active', active);
+                button.setAttribute('aria-pressed', active ? 'true' : 'false');
+            });
+        }
+
+        const savedMobileCalendarView = localStorage.getItem('mobileCalendarView');
+        setMobileCalendarView(savedMobileCalendarView === 'month' ? 'month' : 'day');
+
+        document.querySelectorAll('.mobile-calendar-view-button').forEach(button => {
+            button.addEventListener('click', function () {
+                setMobileCalendarView(button.dataset.calendarView);
+            });
+        });
+
+        function closeModal() {
+            if (!modal) return;
+            modal.classList.add('hidden');
+            modal.setAttribute('aria-hidden', 'true');
+            content.innerHTML = '';
+        }
+
+        function renderDayBookings(date, bookings) {
+            if (!title || !content || !createButton) return;
+
+            const formatted = new Date(date + 'T00:00:00');
+            const label = formatted.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+            title.textContent = `Réservations du ${label}`;
+            createButton.href = `/Hotel/CreateReservation?date=${encodeURIComponent(date)}`;
+
+            if (!bookings || bookings.length === 0) {
+                content.innerHTML = `
+                    <div class="day-booking-item">
+                        <h4>Aucune réservation</h4>
+                        <p>Il n'y a pas de réservation en cours pour cette date.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            content.innerHTML = bookings.map(item => `
+                <div class="day-booking-item">
+                    <h4>${item.firstName} ${item.lastName}</h4>
+                    <p><strong>Chambre :</strong> ${item.roomName}</p>
+                    <p><strong>Période :</strong> ${item.arrivalDate} → ${item.departureDate}</p>
+                    <p><strong>Nuitées :</strong> ${item.nights}</p>
+                    <p><strong>Lits réservés :</strong> ${item.reservedBeds ?? 1}</p>
+                    <p><strong>Type :</strong> ${item.priceType}</p>
+                    <p><strong>Téléphone :</strong> ${item.phone || '—'}</p>
+                    <p><strong>Email :</strong> ${item.email || '—'}</p>
+                    ${item.comment ? `<p><strong>Commentaire :</strong> ${item.comment}</p>` : ''}
+                    <p><a href="/Hotel/EditReservation/${item.id}">Voir / modifier</a></p>
+                </div>
+            `).join('');
+        }
+
+        document.querySelectorAll('.day-cell').forEach(cell => {
+            cell.addEventListener('click', function (event) {
+                if (event.target.closest('a')) return;
+                const date = cell.dataset.date;
+                const bookings = cell.dataset.bookings ? JSON.parse(cell.dataset.bookings.replace(/&quot;/g, '"')) : [];
+                if (!modal) return;
+                renderDayBookings(date, bookings);
+                modal.classList.remove('hidden');
+                modal.setAttribute('aria-hidden', 'false');
+            });
+        });
+
+        document.querySelectorAll('.close-day-detail, [data-close="true"]').forEach(el => {
+            el.addEventListener('click', closeModal);
+        });
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && modal && !modal.classList.contains('hidden')) {
+                closeModal();
+            }
+        });
+    });
+</script>
+
+<style>
+.calendar-shell {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+.calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #4f46e5;
+}
+
+.calendar-actions {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(120px, 1fr));
+    gap: 0.5rem;
+    min-width: 840px;
+}
+
+.day-name {
+    text-align: center;
+    font-weight: 700;
+    color: #374151;
+    padding: 0.5rem;
+    background: #f3f4f6;
+    border-radius: 8px;
+}
+
+.day-cell {
+    min-height: 120px;
+    border-radius: 10px;
+    padding: 0.55rem;
+    border: 1px solid #dfe7f4;
+    background: #ffffff;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.day-cell.out-month {
+    opacity: 0.55;
+}
+
+.day-status-green {
+    background: linear-gradient(180deg, #ecfdf5 0%, #ffffff 100%);
+    border-color: #86efac;
+}
+
+.day-status-orange {
+    background: linear-gradient(180deg, #fff7ed 0%, #ffffff 100%);
+    border-color: #fdba74;
+}
+
+.day-status-red {
+    background: linear-gradient(180deg, #fef2f2 0%, #ffffff 100%);
+    border-color: #fca5a5;
+}
+
+.day-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.day-number {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #111827;
+}
+
+.availability-badge {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.45rem;
+    border-radius: 999px;
+    background: rgba(79, 70, 229, 0.1);
+    color: #4338ca;
+    font-weight: 700;
+}
+
+.day-occupancy {
+    font-size: 0.75rem;
+    color: #374151;
+    font-weight: 600;
+}
+
+.event-pill {
+    background: rgba(79, 70, 229, 0.12);
+    color: #312e81;
+    font-size: 0.72rem;
+    border-radius: 6px;
+    padding: 0.25rem 0.4rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.reservation-mini-count {
+    background: rgba(59, 130, 246, 0.1);
+    color: #1d4ed8;
+    border-radius: 999px;
+    padding: 0.2rem 0.45rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-align: center;
+}
+
+.day-detail-modal {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.day-detail-modal.hidden {
+    display: none;
+}
+
+.day-detail-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+}
+
+.day-detail-dialog {
+    position: relative;
+    width: min(680px, 92vw);
+    max-height: 80vh;
+    overflow: auto;
+    background: white;
+    border-radius: 14px;
+    box-shadow: 0 20px 50px rgba(15, 23, 42, 0.25);
+    padding: 1.2rem;
+    z-index: 1;
+}
+
+.day-detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    border-bottom: 2px solid #4f46e5;
+    padding-bottom: 0.75rem;
+}
+
+.close-day-detail {
+    border: none;
+    background: #e5e7eb;
+    border-radius: 50%;
+    width: 2rem;
+    height: 2rem;
+    font-size: 1.4rem;
+    cursor: pointer;
+}
+
+.day-detail-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+}
+
+.day-booking-item {
+    border: 1px solid #dfe7f4;
+    border-radius: 10px;
+    padding: 0.9rem;
+    background: #f8fafc;
+}
+
+.day-booking-item h4 {
+    margin: 0 0 0.5rem 0;
+    color: #1f2937;
+}
+
+.day-booking-item p {
+    margin: 0.2rem 0;
+    color: #374151;
+}
+
+.day-detail-actions {
+    margin-top: 1.2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.calendar-panel {
+    margin-top: 2rem;
+    background: #f8fafc;
+    border: 1px solid #dfe7f4;
+    border-radius: 12px;
+    padding: 1.25rem;
+}
+
+.event-list {
+    margin: 0;
+    padding-left: 1.2rem;
+}
+</style>
+
+<style>
+@@media (max-width: 767px) {
+    .calendar-shell {
+        margin: 1rem auto;
+        padding: 0 0.75rem 1.5rem;
+    }
+
+    .calendar-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+    }
+
+    .calendar-header h1 {
+        text-align: center;
+        font-size: 1.35rem;
+    }
+
+    .calendar-actions {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.5rem;
+    }
+
+    .calendar-actions .btn {
+        min-height: 44px;
+        padding: 0.5rem 0.25rem;
+        font-size: 0.78rem;
+    }
+
+    .mobile-calendar-view-switcher {
+        display: flex;
+        gap: 0.5rem;
+        margin: 0 0 0.75rem;
+    }
+
+    .mobile-calendar-view-button {
+        flex: 1;
+        min-height: 44px;
+    }
+
+    .mobile-calendar-view-button.is-active {
+        background: #4f46e5;
+        border-color: #4f46e5;
+        color: #ffffff;
+    }
+
+    .calendar-grid {
+        grid-template-columns: 1fr !important;
+        min-width: 0 !important;
+        gap: 0.55rem;
+        border: 0;
+        overflow: visible;
+    }
+
+    .calendar-shell[data-mobile-calendar-view="month"] .calendar-grid {
+        grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
+        gap: 0.25rem;
+    }
+
+    .calendar-shell[data-mobile-calendar-view="month"] .day-name {
+        display: block;
+        padding: 0.35rem 0.1rem;
+        font-size: 0.7rem;
+    }
+
+    .calendar-shell[data-mobile-calendar-view="month"] .day-cell,
+    .calendar-shell[data-mobile-calendar-view="month"] .day-cell.out-month {
+        display: flex;
+        min-height: 78px;
+        padding: 0.35rem;
+        gap: 0.2rem;
+    }
+
+    .calendar-shell[data-mobile-calendar-view="month"] .day-cell.out-month {
+        opacity: 0.55;
+    }
+
+    .calendar-shell[data-mobile-calendar-view="month"] .day-header {
+        align-items: flex-start;
+    }
+
+    .calendar-shell[data-mobile-calendar-view="month"] .day-number {
+        font-size: 0.9rem;
+    }
+
+    .calendar-shell[data-mobile-calendar-view="month"] .availability-badge,
+    .calendar-shell[data-mobile-calendar-view="month"] .day-occupancy,
+    .calendar-shell[data-mobile-calendar-view="month"] .reservation-mini-count {
+        font-size: 0.58rem;
+        padding: 0.12rem 0.2rem;
+    }
+
+    .day-name {
+        display: none;
+    }
+
+    .day-cell {
+        min-height: 0;
+        padding: 0.8rem;
+    }
+
+    .day-cell.out-month {
+        display: none;
+    }
+
+    .day-header {
+        font-size: 1rem;
+    }
+
+    .day-detail-dialog {
+        width: min(94vw, 520px);
+        max-height: 86vh;
+        padding: 1rem;
+    }
+
+    .day-detail-actions {
+        flex-direction: column-reverse;
+        align-items: stretch;
+    }
+
+    .day-detail-actions .btn {
+        min-height: 44px;
+        text-align: center;
+    }
+}
+</style>
+
