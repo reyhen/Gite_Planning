@@ -6,7 +6,6 @@ open Microsoft.Extensions.Hosting
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.AspNetCore.DataProtection
 open Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation
-open Microsoft.AspNetCore.Server.Kestrel.Core
 
 module Program =
     [<EntryPoint>]
@@ -19,10 +18,8 @@ module Program =
             | null -> 8080
             | p -> int p
 
-        // IMPORTANT : config Kestrel pour Render (HTTP uniquement)
-        builder.WebHost.UseKestrel(fun options ->
-            options.ListenAnyIP(port) // HTTP seulement
-        )
+        // IMPORTANT : écouter uniquement en HTTP via UseUrls
+        builder.WebHost.UseUrls($"http://0.0.0.0:{port}")
 
         // Services MVC + Razor
         builder.Services
