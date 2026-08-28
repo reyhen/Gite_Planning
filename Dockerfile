@@ -2,17 +2,19 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-COPY . .
-RUN dotnet restore
-RUN dotnet publish -c Release -o /app
+# Copier uniquement le projet
+COPY Gite_Planning/*.fsproj ./Gite_Planning/
+RUN dotnet restore Gite_Planning/Gite_Planning.fsproj
+
+# Copier le reste du code
+COPY Gite_Planning/. ./Gite_Planning/
+
+RUN dotnet publish Gite_Planning/Gite_Planning.fsproj -c Release -o /app
 
 # Étape 2 : Runtime
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
-
 COPY --from=build /app .
-
-ENV ASPNETCORE_URLS=http://0.0.0.0:${PORT}
-
 ENTRYPOINT ["dotnet", "Gite_Planning.dll"]
+
 
