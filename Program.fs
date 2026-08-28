@@ -57,12 +57,15 @@ module Program =
                         app.UseAuthorization() |> ignore
 
                         app.UseEndpoints(fun endpoints ->
+
                             endpoints.MapControllerRoute(
                                 name = "default",
                                 pattern = "{controller=Home}/{action=Index}/{id?}"
-                            ) |> ignore
+                            )
+                            |> ignore
 
-                            endpoints.MapRazorPages() |> ignore
+                            endpoints.MapRazorPages()
+                            |> ignore
                         )
                     )
                 )
