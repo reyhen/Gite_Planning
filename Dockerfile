@@ -15,3 +15,4 @@ COPY --from=build /app .
 ENV ASPNETCORE_URLS=http://0.0.0.0:${PORT}
 
 ENTRYPOINT ["dotnet", "Gite_Planning.dll"]
+
