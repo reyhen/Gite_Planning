@@ -18,8 +18,10 @@ module Program =
             | null -> 8080
             | p -> int p
 
-        // IMPORTANT : écouter uniquement en HTTP via UseUrls
-        builder.WebHost.UseUrls($"http://0.0.0.0:{port}")
+        // IMPORTANT : configurer l’hébergement via Configure (API disponible dans ton projet)
+        builder.WebHost.Configure(fun webHostBuilder ->
+            webHostBuilder.UseUrls($"http://0.0.0.0:{port}") |> ignore
+        )
 
         // Services MVC + Razor
         builder.Services
