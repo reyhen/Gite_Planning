@@ -29,19 +29,18 @@ module Program =
                         services.AddControllersWithViews().AddRazorRuntimeCompilation() |> ignore
                         services.AddRazorPages() |> ignore
 
-                        let dp =
-                            services.AddDataProtection()
-                                .PersistKeysToFileSystem(
-                                    DirectoryInfo(
-                                        Path.Combine(
-                                            Directory.GetCurrentDirectory(),
-                                            "App_Data",
-                                            "DataProtectionKeys"
-                                        )
+                        services.AddDataProtection()
+                            .PersistKeysToFileSystem(
+                                DirectoryInfo(
+                                    Path.Combine(
+                                        Directory.GetCurrentDirectory(),
+                                        "App_Data",
+                                        "DataProtectionKeys"
                                     )
                                 )
-                                .SetApplicationName("Gite_Planning")
-                                |> ignore
+                            )
+                            .SetApplicationName("Gite_Planning")
+                            |> ignore
                     )
 
                     webHostBuilder.Configure(fun app ->
