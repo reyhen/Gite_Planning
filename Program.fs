@@ -19,8 +19,8 @@ module Program =
             | null -> 8080
             | p -> int p
 
-        // IMPORTANT : désactiver HTTPS et écouter uniquement en HTTP
-        builder.WebHost.ConfigureKestrel(fun options ->
+        // IMPORTANT : config Kestrel pour Render (HTTP uniquement)
+        builder.WebHost.UseKestrel(fun options ->
             options.ListenAnyIP(port) // HTTP seulement
         )
 
@@ -50,10 +50,11 @@ module Program =
 
         if not (builder.Environment.IsDevelopment()) then
             app.UseExceptionHandler("/Home/Error")
-            // ⚠️ NE PAS utiliser HSTS ni HTTPS sur Render
+            // NE PAS utiliser HSTS sur Render
             // app.UseHsts() |> ignore
 
-        // ⚠️ SUPPRIMÉ : app.UseHttpsRedirection()
+        // NE PAS utiliser HTTPS sur Render
+        // app.UseHttpsRedirection() |> ignore
 
         app.UseStaticFiles() |> ignore
         app.UseRouting() |> ignore
