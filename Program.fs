@@ -41,8 +41,7 @@ module Program =
                                     )
                                 )
                                 .SetApplicationName("Gite_Planning")
-
-                        ignore dp
+                                |> ignore
                     )
 
                     webHostBuilder.Configure(fun app ->
