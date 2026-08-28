@@ -2,15 +2,14 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-# Copier uniquement le projet
 COPY Gite_Planning.fsproj ./
 RUN dotnet restore
 
-# Copier le reste du code (sans obj/bin)
 COPY Controllers/ ./Controllers/
 COPY Models/ ./Models/
 COPY Views/ ./Views/
 COPY wwwroot/ ./wwwroot/
+COPY Services/ ./Services/
 COPY Program.fs ./
 COPY appsettings*.json ./
 
