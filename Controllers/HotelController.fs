@@ -22,8 +22,15 @@ type HotelController(logger: ILogger<HotelController>) =
     member this.RoomDetail(id: int) : IActionResult =
         match HotelDataService.getRoomById(id) with
         | Some room ->
-            let reservations = new System.Collections.Generic.List<Reservation>(HotelDataService.getReservationsByRoom(id))
-            this.View((room, reservations)) :> IActionResult
+            let reservations = 
+                new System.Collections.Generic.List<Reservation>(
+                    HotelDataService.getReservationsByRoom(id)
+                )
+
+            let model = Tuple.Create(room, reservations)
+
+            this.View("RoomDetail", model) :> IActionResult
+            
         | None ->
             this.NotFound() :> IActionResult
     
