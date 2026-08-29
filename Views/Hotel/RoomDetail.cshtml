@@ -1,4 +1,4 @@
-@model (Gite_Planning.Models.Room, List<Gite_Planning.Models.Reservation>)
+@model System.Tuple<Gite_Planning.Models.Room, System.Collections.Generic.List<Gite_Planning.Models.Reservation>>
 @{
     ViewData["Title"] = "Détails de la chambre";
     var room = Model.Item1;
