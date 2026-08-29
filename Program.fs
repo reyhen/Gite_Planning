@@ -23,6 +23,8 @@ module Program =
             Host.CreateDefaultBuilder(args)
                 .ConfigureWebHostDefaults(fun webHostBuilder ->
 
+                    // Render fournit le port via la variable PORT.
+                    // L'application écoute uniquement en HTTP.
                     webHostBuilder.UseUrls(
                         sprintf "http://0.0.0.0:%s" port
                     )
@@ -92,8 +94,7 @@ module Program =
                     |> ignore
                 )
 
-        let host =
-            builder.Build()
+        let host = builder.Build()
 
         host.Run()
 
