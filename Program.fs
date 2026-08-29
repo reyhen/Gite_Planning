@@ -10,7 +10,6 @@ open Microsoft.AspNetCore.DataProtection
 open Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation
 
 module Program =
-
     [<EntryPoint>]
     let main args =
 
@@ -87,4 +86,3 @@ module Program =
         host.Run()
 
         0
-```
