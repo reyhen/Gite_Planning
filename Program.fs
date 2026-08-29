@@ -10,6 +10,7 @@ open Microsoft.AspNetCore.DataProtection
 open Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation
 
 module Program =
+
     [<EntryPoint>]
     let main args =
 
@@ -22,66 +23,77 @@ module Program =
             Host.CreateDefaultBuilder(args)
                 .ConfigureWebHostDefaults(fun webHostBuilder ->
 
-                    webHostBuilder.UseUrls(sprintf "http://0.0.0.0:%s" port)
+                    webHostBuilder.UseUrls(
+                        sprintf "http://0.0.0.0:%s" port
+                    )
+                    |> ignore
 
-                    webHostBuilder.ConfigureServices(fun services ->
+                    webHostBuilder.ConfigureServices(
+                        fun services ->
 
-                        services.AddControllersWithViews()
-                            .AddRazorRuntimeCompilation()
-                        |> ignore
+                            services.AddControllersWithViews()
+                                .AddRazorRuntimeCompilation()
+                            |> ignore
 
-                        services.AddRazorPages()
-                        |> ignore
+                            services.AddRazorPages()
+                            |> ignore
 
-                        services.AddDataProtection()
-                            .PersistKeysToFileSystem(
-                                DirectoryInfo(
-                                    Path.Combine(
-                                        Directory.GetCurrentDirectory(),
-                                        "App_Data",
-                                        "DataProtectionKeys"
+                            services.AddDataProtection()
+                                .PersistKeysToFileSystem(
+                                    DirectoryInfo(
+                                        Path.Combine(
+                                            Directory.GetCurrentDirectory(),
+                                            "App_Data",
+                                            "DataProtectionKeys"
+                                        )
                                     )
                                 )
-                            )
-                            .SetApplicationName("Gite_Planning")
-                        |> ignore
+                                .SetApplicationName("Gite_Planning")
+                            |> ignore
                     )
+                    |> ignore
 
-                    webHostBuilder.Configure(fun app ->
+                    webHostBuilder.Configure(
+                        Action<IApplicationBuilder>(
+                            fun app ->
 
-                        let env =
-                            app.ApplicationServices
-                                .GetRequiredService<IHostEnvironment>()
+                                let env =
+                                    app.ApplicationServices
+                                        .GetRequiredService<IHostEnvironment>()
 
-                        if not env.IsDevelopment() then
-                            app.UseExceptionHandler("/Home/Error")
-                            |> ignore
+                                if not (env.IsDevelopment()) then
+                                    app.UseExceptionHandler("/Home/Error")
+                                    |> ignore
 
-                        app.UseStaticFiles()
-                        |> ignore
+                                app.UseStaticFiles()
+                                |> ignore
 
-                        app.UseRouting()
-                        |> ignore
+                                app.UseRouting()
+                                |> ignore
 
-                        app.UseAuthorization()
-                        |> ignore
+                                app.UseAuthorization()
+                                |> ignore
 
-                        app.UseEndpoints(fun endpoints ->
+                                app.UseEndpoints(
+                                    fun endpoints ->
 
-                            endpoints.MapControllerRoute(
-                                "default",
-                                "{controller=Home}/{action=Index}/{id?}"
-                            )
-                            |> ignore
+                                        endpoints.MapControllerRoute(
+                                            "default",
+                                            "{controller=Home}/{action=Index}/{id?}"
+                                        )
+                                        |> ignore
 
-                            endpoints.MapRazorPages()
-                            |> ignore
+                                        endpoints.MapRazorPages()
+                                        |> ignore
+                                )
+                                |> ignore
                         )
-                        |> ignore
                     )
+                    |> ignore
                 )
 
-        let host = builder.Build()
+        let host =
+            builder.Build()
 
         host.Run()
 
