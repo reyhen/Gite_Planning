@@ -20,8 +20,31 @@
         })
         .OrderByDescending(g => g.FirstRes.ArrivalDate)
         .ToList();
-    var totalReservedBeds = groupedReservations
-        .Sum(g => g.Reservations.Sum(r => r.ReservedBeds));
+    var totalReservedBedNights = groupedReservations
+    .Sum(g => g.Reservations.Sum(r =>
+    {
+        var start = r.ArrivalDate.Date;
+        var end = r.DepartureDate.Date;
+
+        // Si une période est sélectionnée, on limite le calcul à cette période
+        if (DateTime.TryParse(selectedFromDate, out var fromDate))
+        {
+            fromDate = fromDate.Date;
+            if (start < fromDate)
+                start = fromDate;
+        }
+
+        if (DateTime.TryParse(selectedToDate, out var toDate))
+        {
+            toDate = toDate.Date;
+            if (end > toDate)
+                end = toDate;
+        }
+
+        var nights = (end - start).Days;
+
+        return Math.Max(0, nights) * r.ReservedBeds;
+    }));
 }
 
 <div class="filter-summary">
@@ -45,8 +68,8 @@
             <div class="summary-badge">
                 <span class="summary-icon">🛏️</span>
                 <div>
-                    <strong>@totalReservedBeds</strong>
-                    <span>lit@(totalReservedBeds > 1 ? "s" : "") réservé@(totalReservedBeds > 1 ? "s" : "")</span>
+                    <strong>@totalReservedBedNights</strong>
+                    <span>nuitée@(totalReservedBedNights > 1 ? "s" : "")-lit@(totalReservedBedNights > 1 ? "s" : "")</span>
                 </div>
             </div>
         </div>
