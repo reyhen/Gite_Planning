@@ -20,7 +20,38 @@
         })
         .OrderByDescending(g => g.FirstRes.ArrivalDate)
         .ToList();
+    var totalReservedBeds = groupedReservations
+        .Sum(g => g.Reservations.Sum(r => r.ReservedBeds));
 }
+
+<div class="filter-summary">
+    @if (groupedReservations.Count == 0)
+    {
+        <div class="empty-summary">
+            Aucune réservation ne correspond aux filtres sélectionnés.
+        </div>
+    }
+    else
+    {
+        <div class="summary-badges">
+            <div class="summary-badge">
+                <span class="summary-icon">📅</span>
+                <div>
+                    <strong>@groupedReservations.Count</strong>
+                    <span>réservation@(groupedReservations.Count > 1 ? "s" : "")</span>
+                </div>
+            </div>
+
+            <div class="summary-badge">
+                <span class="summary-icon">🛏️</span>
+                <div>
+                    <strong>@totalReservedBeds</strong>
+                    <span>lit@(totalReservedBeds > 1 ? "s" : "") réservé@(totalReservedBeds > 1 ? "s" : "")</span>
+                </div>
+            </div>
+        </div>
+    }
+</div>
 
 <div class="hotel-container">
     <div class="section-header">
@@ -89,17 +120,6 @@
                 <button type="submit" class="btn btn-primary">Appliquer</button>
             </div>
         </form>
-    </div>
-
-    <div class="filter-summary">
-        @if (groupedReservations.Count == 0)
-        {
-            <p>Aucune réservation ne correspond aux filtres sélectionnés.</p>
-        }
-        else
-        {
-            <p>@groupedReservations.Count réservation(s) affichée(s)</p>
-        }
     </div>
 
     @if (groupedReservations.Count == 0)
@@ -394,7 +414,7 @@
     white-space: nowrap;
 }
 
-.reservation-cancel-form {
+.delete-reservation-form {
     display: flex;
     margin: 0;
     padding: 0;
@@ -512,7 +532,52 @@
 .filter-summary {
     margin-bottom: 1rem;
     color: #374151;
-    font-weight: 600;
+}
+
+.summary-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.summary-badge {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 18px;
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 10px;
+    min-width: 170px;
+}
+
+.summary-icon {
+    font-size: 24px;
+    line-height: 1;
+}
+
+.summary-badge div {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+}
+
+.summary-badge strong {
+    font-size: 20px;
+    font-weight: 700;
+}
+
+.summary-badge span:not(.summary-icon) {
+    font-size: 13px;
+    color: #6c757d;
+}
+
+.empty-summary {
+    padding: 12px 16px;
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 10px;
+    color: #6c757d;
 }
 
 .empty-state {
@@ -649,7 +714,7 @@
         font-size: 1.05rem;
     }
 
-    .reservation-cancel-form {
+    .delete-reservation-form {
         display: flex;
     }
 }
